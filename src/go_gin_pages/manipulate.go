@@ -66,6 +66,34 @@ func parseISO8601Duration(val types.ISO8601Duration, minDuration time.Duration) 
 	return
 }
 
+func FindAllIterationManipulator(c *gin.Context) {
+	var result []iterationManipulatorCompatibeWithJSON = make([]iterationManipulatorCompatibeWithJSON, 0)
+	for _, v := range iterationManipulators {
+		result = append(result, v.ToStructCompatibleWithJSON())
+	}
+	c.JSON(
+		http.StatusOK,
+		result,
+	)
+}
+
+func FindIterationManipulatorByCode(c *gin.Context) {
+	code := c.Param("code")
+	for _, v := range iterationManipulators {
+		if v.Code == code {
+			c.JSON(
+				http.StatusOK,
+				v.Data,
+			)
+			return
+		}
+	}
+	c.JSON(
+		http.StatusNoContent,
+		gin.H{},
+	)
+}
+
 func CreateIterationManipulator(c *gin.Context) {
 	var data manipulateIterationData
 	if err := c.ShouldBindJSON(&data); err != nil {
@@ -89,17 +117,6 @@ func CreateIterationManipulator(c *gin.Context) {
 	c.JSON(
 		http.StatusCreated,
 		iterationManipulator.ToStructCompatibleWithJSON(),
-	)
-}
-
-func FindAllIterationManipulator(c *gin.Context) {
-	var result []iterationManipulatorCompatibeWithJSON = make([]iterationManipulatorCompatibeWithJSON, 0)
-	for _, v := range iterationManipulators {
-		result = append(result, v.ToStructCompatibleWithJSON())
-	}
-	c.JSON(
-		http.StatusOK,
-		result,
 	)
 }
 
