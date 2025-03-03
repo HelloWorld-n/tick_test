@@ -127,33 +127,15 @@ func UpdateIterationManipulator(c *gin.Context) {
 		return
 	}
 
-	var dur time.Duration
-	var err error
-
 	code := c.Param("code")
 	for _, v := range iterationManipulators {
 		if v.Code == code {
-			// verify valid input
-			if data.Duration != nil {
-				dur, err = parseISO8601Duration(*data.Duration, time.Second)
-				if err != nil {
-					c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
-					return
-				}
+			_, err := applyUpdateToIterationManipulator(data, v)
+			if err != nil {
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+				return
 			}
-
-			// apply changes
-			if data.Duration != nil {
-				v.Data.Duration = *data.Duration
-				v.Manipulator.Reset(dur)
-			}
-			if data.Value != nil {
-				v.Data.Value = *data.Value
-			}
-			c.JSON(
-				http.StatusAccepted,
-				gin.H{},
-			)
+			c.JSON(http.StatusAccepted, v.Data)
 			return
 		}
 	}
@@ -161,6 +143,26 @@ func UpdateIterationManipulator(c *gin.Context) {
 		http.StatusNoContent,
 		gin.H{},
 	)
+}
+
+func applyUpdateToIterationManipulator(data updateiterationManipulator, v *iterationManipulator) (dur time.Duration, err error) {
+	// verify valid input
+	if data.Duration != nil {
+		dur, err = parseISO8601Duration(*data.Duration, time.Second)
+		if err != nil {
+			return
+		}
+	}
+
+	// apply changes
+	if data.Duration != nil {
+		v.Data.Duration = *data.Duration
+		v.Manipulator.Reset(dur)
+	}
+	if data.Value != nil {
+		v.Data.Value = *data.Value
+	}
+	return
 }
 
 func DeleteIterationManipulator(c *gin.Context) {
