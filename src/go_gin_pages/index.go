@@ -64,8 +64,10 @@ func saveIteration() error {
 	return nil
 }
 
-func Prepare() {
+func Prepare(engine *gin.Engine) {
 	loadIteration()
+	engine.GET("/", Index)
+	prepareManipulator(engine.Group("/manipulator"))
 }
 
 func Index(c *gin.Context) {

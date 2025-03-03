@@ -66,7 +66,16 @@ func parseISO8601Duration(val types.ISO8601Duration, minDuration time.Duration) 
 	return
 }
 
-func FindAllIterationManipulator(c *gin.Context) {
+func prepareManipulator(route *gin.RouterGroup) {
+	route.GET("/", FindAllIterationManipulators)
+	route.GET("/code/:code", FindIterationManipulatorByCode)
+	route.POST("/", CreateIterationManipulator)
+	route.PUT("/code/:code", UpdateIterationManipulator)
+	route.DELETE("/code/:code", DeleteIterationManipulator)
+}
+
+
+func FindAllIterationManipulators(c *gin.Context) {
 	var result []iterationManipulatorCompatibeWithJSON = make([]iterationManipulatorCompatibeWithJSON, 0)
 	for _, v := range iterationManipulators {
 		result = append(result, v.ToStructCompatibleWithJSON())
