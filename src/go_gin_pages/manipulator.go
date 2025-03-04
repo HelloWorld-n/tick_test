@@ -17,7 +17,7 @@ type manipulateIterationData struct {
 	Value    int                   `json:"Value" binding:"required"`
 }
 
-type updateiterationManipulator struct {
+type updateIterationManipulatorData struct {
 	Duration *types.ISO8601Duration `json:"Duration"`
 	Value    *int                   `json:"Value"`
 }
@@ -129,7 +129,7 @@ func createIterationManipulator(c *gin.Context) {
 }
 
 func updateIterationManipulator(c *gin.Context) {
-	var data updateiterationManipulator
+	var data updateIterationManipulatorData
 	if err := c.ShouldBindJSON(&data); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -153,7 +153,7 @@ func updateIterationManipulator(c *gin.Context) {
 	)
 }
 
-func applyUpdateToIterationManipulator(data updateiterationManipulator, v *iterationManipulator) (dur time.Duration, err error) {
+func applyUpdateToIterationManipulator(data updateIterationManipulatorData, v *iterationManipulator) (dur time.Duration, err error) {
 	// verify valid input
 	if data.Duration != nil {
 		dur, err = parseISO8601Duration(*data.Duration, time.Second)
