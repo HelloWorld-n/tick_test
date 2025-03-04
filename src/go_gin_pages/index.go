@@ -66,11 +66,12 @@ func saveIteration() error {
 
 func Prepare(engine *gin.Engine) {
 	loadIteration()
-	engine.GET("/", Index)
+	engine.GET("/", index)
 	prepareManipulator(engine.Group("/manipulator"))
+	prepareSort(engine.Group("/sort"))
 }
 
-func Index(c *gin.Context) {
+func index(c *gin.Context) {
 	if err := loadIteration(); err != nil {
 		c.JSON(
 			http.StatusInternalServerError,

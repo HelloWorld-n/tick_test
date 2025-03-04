@@ -67,15 +67,14 @@ func parseISO8601Duration(val types.ISO8601Duration, minDuration time.Duration) 
 }
 
 func prepareManipulator(route *gin.RouterGroup) {
-	route.GET("/", FindAllIterationManipulators)
-	route.GET("/code/:code", FindIterationManipulatorByCode)
-	route.POST("/", CreateIterationManipulator)
-	route.PUT("/code/:code", UpdateIterationManipulator)
-	route.DELETE("/code/:code", DeleteIterationManipulator)
+	route.GET("", findAllIterationManipulators)
+	route.GET("/code/:code", findIterationManipulatorByCode)
+	route.POST("", createIterationManipulator)
+	route.PUT("/code/:code", updateIterationManipulator)
+	route.DELETE("/code/:code", deleteIterationManipulator)
 }
 
-
-func FindAllIterationManipulators(c *gin.Context) {
+func findAllIterationManipulators(c *gin.Context) {
 	var result []iterationManipulatorCompatibeWithJSON = make([]iterationManipulatorCompatibeWithJSON, 0)
 	for _, v := range iterationManipulators {
 		result = append(result, v.ToStructCompatibleWithJSON())
@@ -86,7 +85,7 @@ func FindAllIterationManipulators(c *gin.Context) {
 	)
 }
 
-func FindIterationManipulatorByCode(c *gin.Context) {
+func findIterationManipulatorByCode(c *gin.Context) {
 	code := c.Param("code")
 	for _, v := range iterationManipulators {
 		if v.Code == code {
@@ -103,7 +102,7 @@ func FindIterationManipulatorByCode(c *gin.Context) {
 	)
 }
 
-func CreateIterationManipulator(c *gin.Context) {
+func createIterationManipulator(c *gin.Context) {
 	var data manipulateIterationData
 	if err := c.ShouldBindJSON(&data); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -129,7 +128,7 @@ func CreateIterationManipulator(c *gin.Context) {
 	)
 }
 
-func UpdateIterationManipulator(c *gin.Context) {
+func updateIterationManipulator(c *gin.Context) {
 	var data updateiterationManipulator
 	if err := c.ShouldBindJSON(&data); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -174,7 +173,7 @@ func applyUpdateToIterationManipulator(data updateiterationManipulator, v *itera
 	return
 }
 
-func DeleteIterationManipulator(c *gin.Context) {
+func deleteIterationManipulator(c *gin.Context) {
 	code := c.Param("code")
 	for i, v := range iterationManipulators {
 		if v.Code == code {
