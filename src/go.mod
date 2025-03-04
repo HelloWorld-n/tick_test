@@ -4,6 +4,8 @@ go 1.24
 
 require github.com/gin-gonic/gin v1.10.0
 
+require golang.org/x/exp v0.0.0-20250228200357-dead58393ab7 // indirect
+
 require (
 	github.com/bytedance/sonic v1.11.6 // indirect
 	github.com/bytedance/sonic/loader v0.1.1 // indirect
