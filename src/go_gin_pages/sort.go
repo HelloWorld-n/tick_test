@@ -70,7 +70,7 @@ func makeSortFunction[T any](fn func(a0 T, a1 T) bool, sortType string) func(c *
 			calcResult.TimeTaken = (&iso8601duration.Duration{Duration: time.Time.Sub(now, startedAt)}).String()
 			calcResult.Result = arr
 		}()
-		c.JSON(http.StatusOK, code)
+		c.JSON(http.StatusCreated, code)
 	}
 }
 
@@ -177,7 +177,7 @@ func sortIntensivelyCalculatedObjectForComparation(c *gin.Context) {
 		arr = append(arr, item.Element)
 	}
 
-	c.JSON(http.StatusOK, code)
+	c.JSON(http.StatusCreated, code)
 }
 
 func fetchSortedMeta(meta *[]intensiveCalculationMeta, sortType string, wg *sync.WaitGroup) {
