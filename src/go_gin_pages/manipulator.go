@@ -1,8 +1,12 @@
 package go_gin_pages
 
 import (
+	"encoding/json"
 	"errors"
 	"net/http"
+	"os"
+	"path/filepath"
+	"sync"
 	"time"
 
 	"tick_test/types"
@@ -23,24 +27,64 @@ type updateIterationManipulatorData struct {
 }
 
 type iterationManipulator struct {
-	Code        string
-	Data        manipulateIterationData
-	Manipulator *time.Ticker
+	Code        string                  `json:"Code"`
+	Data        manipulateIterationData `json:"Data"`
+	Manipulator *time.Ticker            `json:"-"`
 }
 
-type iterationManipulatorCompatibeWithJSON struct {
-	Code string
-	Data manipulateIterationData
-}
+const iterationManipulatorFile = "../.data/IterationManipulators.json"
 
-func (obj iterationManipulator) ToStructCompatibleWithJSON() iterationManipulatorCompatibeWithJSON {
-	return iterationManipulatorCompatibeWithJSON{
-		Code: obj.Code,
-		Data: obj.Data,
+var iterationManipulatorMutex sync.Mutex
+
+func loadIterationManipulators() error {
+	file, err := os.Open(iterationManipulatorFile)
+	if err != nil {
+		if os.IsNotExist(err) {
+			return nil
+		}
+		return err
 	}
+	defer file.Close()
+
+	decoder := json.NewDecoder(file)
+	if err := decoder.Decode(&iterationManipulators); err != nil {
+		return err
+	}
+
+	for _, iterationManipulator := range iterationManipulators {
+		dur, err := parseISO8601Duration(iterationManipulator.Data.Duration, time.Second)
+		if err == nil {
+			ticker := time.NewTicker(dur)
+			iterationManipulator.Manipulator = ticker
+			go manipulateIteration(iterationManipulator)
+		} else {
+			return err
+		}
+	}
+	return nil
 }
 
-var iterationManipulators []*iterationManipulator
+func saveIterationManipulators() error {
+	iterationManipulatorMutex.Lock()
+	defer iterationManipulatorMutex.Unlock()
+	if err := os.MkdirAll(filepath.Dir(iterationManipulatorFile), 0755); err != nil {
+		return err
+	}
+
+	file, err := os.Create(iterationManipulatorFile)
+	if err != nil {
+		return err
+	}
+	defer file.Close()
+
+	encoder := json.NewEncoder(file)
+	if err := encoder.Encode(iterationManipulators); err != nil {
+		return err
+	}
+	return nil
+}
+
+var iterationManipulators []*iterationManipulator = make([]*iterationManipulator, 0)
 
 func manipulateIteration(obj *iterationManipulator) error {
 	for range obj.Manipulator.C {
@@ -67,6 +111,7 @@ func parseISO8601Duration(val types.ISO8601Duration, minDuration time.Duration) 
 }
 
 func prepareManipulator(route *gin.RouterGroup) {
+	loadIterationManipulators()
 	route.GET("", findAllIterationManipulators)
 	route.GET("/code/:code", findIterationManipulatorByCode)
 	route.POST("", createIterationManipulator)
@@ -75,13 +120,9 @@ func prepareManipulator(route *gin.RouterGroup) {
 }
 
 func findAllIterationManipulators(c *gin.Context) {
-	var result []iterationManipulatorCompatibeWithJSON = make([]iterationManipulatorCompatibeWithJSON, 0)
-	for _, v := range iterationManipulators {
-		result = append(result, v.ToStructCompatibleWithJSON())
-	}
 	c.JSON(
 		http.StatusOK,
-		result,
+		iterationManipulators,
 	)
 }
 
@@ -100,6 +141,7 @@ func findIterationManipulatorByCode(c *gin.Context) {
 }
 
 func createIterationManipulator(c *gin.Context) {
+	defer saveIterationManipulators()
 	var data manipulateIterationData
 	if err := c.ShouldBindJSON(&data); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -121,11 +163,12 @@ func createIterationManipulator(c *gin.Context) {
 	go manipulateIteration(&iterationManipulator)
 	c.JSON(
 		http.StatusCreated,
-		iterationManipulator.ToStructCompatibleWithJSON(),
+		iterationManipulator,
 	)
 }
 
 func updateIterationManipulator(c *gin.Context) {
+	defer saveIterationManipulators()
 	var data updateIterationManipulatorData
 	if err := c.ShouldBindJSON(&data); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -168,6 +211,7 @@ func applyUpdateToIterationManipulator(data updateIterationManipulatorData, v *i
 }
 
 func deleteIterationManipulator(c *gin.Context) {
+	defer saveIterationManipulators()
 	code := c.Param("code")
 	for i, v := range iterationManipulators {
 		if v.Code == code {
