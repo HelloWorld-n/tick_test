@@ -15,6 +15,8 @@ import (
 	"golang.org/x/exp/constraints"
 )
 
+var validSortTypes []string = make([]string, 0)
+
 type intensiveCalculationResult struct {
 	Code        string
 	SortType    string
@@ -24,6 +26,14 @@ type intensiveCalculationResult struct {
 	Result      any
 }
 
+type intensiveCalculationMeta struct {
+	SortType         string
+	AverageTimeTaken types.ISO8601Duration
+	MinTimeTaken     types.ISO8601Duration
+	MaxTimeTaken     types.ISO8601Duration
+	SampleSize       uint64
+}
+
 var intensiveCalculationResults []*intensiveCalculationResult
 
 type comparableElement[T any, ord constraints.Ordered] struct {
@@ -31,7 +41,12 @@ type comparableElement[T any, ord constraints.Ordered] struct {
 	Cmp     ord
 }
 
+func registerSortType(sortType string) {
+	validSortTypes = append(validSortTypes, sortType)
+}
+
 func makeSortFunction[T any](fn func(a0 T, a1 T) bool, sortType string) func(c *gin.Context) {
+	registerSortType(sortType)
 	return func(c *gin.Context) {
 		var arr []T
 		var code = random.RandSeq(80)
@@ -165,6 +180,41 @@ func sortIntensivelyCalculatedObjectForComparation(c *gin.Context) {
 	c.JSON(http.StatusOK, code)
 }
 
+func fetchSortedMeta(meta *[]intensiveCalculationMeta, sortType string, wg *sync.WaitGroup) {
+	defer wg.Done()
+
+	var metaSample = intensiveCalculationMeta{
+		SortType:   sortType,
+		SampleSize: 0,
+	}
+	totalTimeTaken := 0 * time.Nanosecond
+	var minTimeTaken time.Duration = math.MaxInt64
+	var maxTimeTaken time.Duration = math.MinInt64
+	for _, val := range intensiveCalculationResults {
+		if val.SortType == sortType {
+			timeTaken, err := parseISO8601Duration(val.TimeTaken, 0*time.Nanosecond)
+			if err != nil {
+				break
+			}
+
+			metaSample.SampleSize += 1
+			if timeTaken < minTimeTaken {
+				minTimeTaken = timeTaken
+			}
+			if timeTaken > maxTimeTaken {
+				maxTimeTaken = timeTaken
+			}
+			totalTimeTaken += timeTaken
+		}
+	}
+	if metaSample.SampleSize > 0 {
+		metaSample.MinTimeTaken = (&iso8601duration.Duration{Duration: minTimeTaken}).String()
+		metaSample.MaxTimeTaken = (&iso8601duration.Duration{Duration: maxTimeTaken}).String()
+		metaSample.AverageTimeTaken = (&iso8601duration.Duration{Duration: totalTimeTaken / time.Duration(metaSample.SampleSize)}).String()
+		*meta = append(*meta, metaSample)
+	}
+}
+
 func findStoredResult(c *gin.Context) {
 	code := c.Param("code")
 	for _, v := range intensiveCalculationResults {
@@ -176,18 +226,35 @@ func findStoredResult(c *gin.Context) {
 	c.Status(http.StatusNoContent)
 }
 
+func findStoredResultMeta(c *gin.Context) {
+	var storedResultMetaInformation = new([]intensiveCalculationMeta)
+	*storedResultMetaInformation = make([]intensiveCalculationMeta, 0)
+	var wg = new(sync.WaitGroup)
+
+	for _, sortType := range validSortTypes {
+		wg.Add(1)
+		go fetchSortedMeta(storedResultMetaInformation, sortType, wg)
+	}
+	wg.Wait()
+	c.JSON(http.StatusOK, storedResultMetaInformation)
+}
+
 func findAllStoredResult(c *gin.Context) {
 	c.JSON(http.StatusOK, intensiveCalculationResults)
 }
 
 func prepareSort(route *gin.RouterGroup) {
 	intensiveCalculationResults = make([]*intensiveCalculationResult, 0)
+
 	route.GET("", findAllStoredResult)
+	route.GET("/meta", findStoredResultMeta)
 	route.GET("/code/:code", findStoredResult)
 	route.POST("/increase", incrementalSort)
 	route.POST("/decrease", decrementalSort)
 	route.POST("/increase-abs", absoluteIncrementalSort)
 	route.POST("/decrease-abs", absoluteDecrementalSort)
 	route.POST("/calculative/intensive", intensiveSort)
+
+	registerSortType("calculative/calculate-once")
 	route.POST("/calculative/calculate-once", sortIntensivelyCalculatedObjectForComparation)
 }
