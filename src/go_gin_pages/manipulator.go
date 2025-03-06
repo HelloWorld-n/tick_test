@@ -96,10 +96,7 @@ func findIterationManipulatorByCode(c *gin.Context) {
 			return
 		}
 	}
-	c.JSON(
-		http.StatusNoContent,
-		gin.H{},
-	)
+	c.Status(http.StatusNoContent)
 }
 
 func createIterationManipulator(c *gin.Context) {
@@ -147,10 +144,7 @@ func updateIterationManipulator(c *gin.Context) {
 			return
 		}
 	}
-	c.JSON(
-		http.StatusNoContent,
-		gin.H{},
-	)
+	c.Status(http.StatusNoContent)
 }
 
 func applyUpdateToIterationManipulator(data updateIterationManipulatorData, v *iterationManipulator) (dur time.Duration, err error) {
@@ -179,15 +173,9 @@ func deleteIterationManipulator(c *gin.Context) {
 		if v.Code == code {
 			v.Manipulator.Stop()
 			iterationManipulators = append(iterationManipulators[:i], iterationManipulators[i+1:]...)
-			c.JSON(
-				http.StatusAccepted,
-				gin.H{},
-			)
+			c.Status(http.StatusAccepted)
 			return
 		}
 	}
-	c.JSON(
-		http.StatusOK,
-		gin.H{},
-	)
+	c.Status(http.StatusOK)
 }
