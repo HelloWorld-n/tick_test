@@ -70,7 +70,7 @@ func prepareManipulator(route *gin.RouterGroup) {
 	route.GET("", findAllIterationManipulators)
 	route.GET("/code/:code", findIterationManipulatorByCode)
 	route.POST("", createIterationManipulator)
-	route.PUT("/code/:code", updateIterationManipulator)
+	route.PATCH("/code/:code", updateIterationManipulator)
 	route.DELETE("/code/:code", deleteIterationManipulator)
 }
 
