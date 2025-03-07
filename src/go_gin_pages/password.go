@@ -107,7 +107,6 @@ func createSimplePasswordFromParsedData(data PasswordSimpleConfig) string {
 		randomElement := (data.Charset)[randomIndex]
 		password = fmt.Sprint(password, randomElement)
 	}
-	passwords = append(passwords, password)
 	return password
 }
 
@@ -122,6 +121,7 @@ func createSimplePassword(c *gin.Context) {
 		return
 	}
 	password := createSimplePasswordFromParsedData(data)
+	passwords = append(passwords, password)
 	c.JSON(
 		http.StatusCreated,
 		password,
@@ -144,6 +144,7 @@ func createSimpleStackPassword(c *gin.Context) {
 			password += createSimplePasswordFromParsedData(data.extractPasswordSimpleConfig(i))
 		}
 	}
+	passwords = append(passwords, password)
 	c.JSON(
 		http.StatusCreated,
 		password,
