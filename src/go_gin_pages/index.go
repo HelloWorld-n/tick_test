@@ -69,6 +69,7 @@ func Prepare(engine *gin.Engine) {
 	engine.GET("/", index)
 	prepareManipulator(engine.Group("/manipulator"))
 	prepareSort(engine.Group("/sort"))
+	preparePassword(engine.Group("/password"))
 }
 
 func index(c *gin.Context) {
