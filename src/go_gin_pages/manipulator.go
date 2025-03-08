@@ -3,6 +3,7 @@ package go_gin_pages
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"path/filepath"
@@ -36,7 +37,49 @@ const iterationManipulatorFile = "../.data/IterationManipulators.json"
 
 var iterationManipulatorMutex sync.Mutex
 
-func loadIterationManipulators() error {
+func loadIterationManipulatorsFromDatabase() error {
+	query := `SELECT code, duration, value FROM manipulator`
+
+	rows, err := database.Query(query)
+	if err != nil {
+		return err
+	}
+	defer rows.Close()
+	iterationManipulators = make([]*iterationManipulator, 0)
+
+	for rows.Next() {
+		var code string
+		var duration types.ISO8601Duration
+		var value int
+
+		if err := rows.Scan(&code, &duration, &value); err != nil {
+			return err
+		}
+
+		iterationManipulator := &iterationManipulator{
+			Code: code,
+			Data: manipulateIterationData{
+				Duration: duration,
+				Value:    value,
+			},
+		}
+		iterationManipulators = append(iterationManipulators, iterationManipulator)
+	}
+
+	if err := rows.Err(); err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func saveIterationManipulatorToDatabase(obj *iterationManipulator) (err error) {
+	query := `INSERT INTO manipulator (code, duration, value) VALUES ($1, $2, $3)`
+	_, err = database.Exec(query, obj.Code, obj.Data.Duration, obj.Data.Value)
+	return
+}
+
+func loadIterationManipulatorsFromFile() error {
 	file, err := os.Open(iterationManipulatorFile)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -50,7 +93,15 @@ func loadIterationManipulators() error {
 	if err := decoder.Decode(&iterationManipulators); err != nil {
 		return err
 	}
+	return nil
+}
 
+func loadIterationManipulators() error {
+	if database != nil {
+		loadIterationManipulatorsFromDatabase()
+	} else {
+		loadIterationManipulatorsFromFile()
+	}
 	for _, iterationManipulator := range iterationManipulators {
 		dur, err := parseISO8601Duration(iterationManipulator.Data.Duration, time.Second)
 		if err == nil {
@@ -110,15 +161,6 @@ func parseISO8601Duration(val types.ISO8601Duration, minDuration time.Duration) 
 	return
 }
 
-func prepareManipulator(route *gin.RouterGroup) {
-	loadIterationManipulators()
-	route.GET("", findAllIterationManipulators)
-	route.GET("/code/:code", findIterationManipulatorByCode)
-	route.POST("", createIterationManipulator)
-	route.PATCH("/code/:code", updateIterationManipulator)
-	route.DELETE("/code/:code", deleteIterationManipulator)
-}
-
 func findAllIterationManipulators(c *gin.Context) {
 	c.JSON(
 		http.StatusOK,
@@ -128,6 +170,7 @@ func findAllIterationManipulators(c *gin.Context) {
 
 func findIterationManipulatorByCode(c *gin.Context) {
 	code := c.Param("code")
+
 	for _, v := range iterationManipulators {
 		if v.Code == code {
 			c.JSON(
@@ -141,7 +184,9 @@ func findIterationManipulatorByCode(c *gin.Context) {
 }
 
 func createIterationManipulator(c *gin.Context) {
-	defer saveIterationManipulators()
+	if database == nil {
+		defer saveIterationManipulators()
+	}
 	var data manipulateIterationData
 	if err := c.ShouldBindJSON(&data); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -159,6 +204,10 @@ func createIterationManipulator(c *gin.Context) {
 		Data:        data,
 		Manipulator: ticker,
 	}
+	err = saveIterationManipulatorToDatabase(&iterationManipulator)
+	if err != nil {
+		fmt.Println(err)
+	}
 	iterationManipulators = append(iterationManipulators, &iterationManipulator)
 	go manipulateIteration(&iterationManipulator)
 	c.JSON(
@@ -168,14 +217,17 @@ func createIterationManipulator(c *gin.Context) {
 }
 
 func updateIterationManipulator(c *gin.Context) {
-	defer saveIterationManipulators()
+	code := c.Param("code")
+
+	if database == nil {
+		defer saveIterationManipulators()
+	}
 	var data updateIterationManipulatorData
 	if err := c.ShouldBindJSON(&data); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	code := c.Param("code")
 	for _, v := range iterationManipulators {
 		if v.Code == code {
 			_, err := applyUpdateToIterationManipulator(data, v)
@@ -207,12 +259,32 @@ func applyUpdateToIterationManipulator(data updateIterationManipulatorData, v *i
 	if data.Value != nil {
 		v.Data.Value = *data.Value
 	}
+	if database != nil {
+		query := `UPDATE manipulator SET duration = $1, value = $2 WHERE code = $3`
+		_, err := database.Exec(query, v.Data.Duration, v.Data.Value, v.Code)
+		if err != nil {
+			return 0, err
+		}
+	}
 	return
 }
 
 func deleteIterationManipulator(c *gin.Context) {
-	defer saveIterationManipulators()
 	code := c.Param("code")
+
+	if database == nil {
+		defer saveIterationManipulators()
+	} else {
+		if database != nil {
+			query := `DELETE FROM manipulator WHERE code = $1`
+			_, err := database.Exec(query, code)
+			if err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				return
+			}
+		}
+	}
+
 	for i, v := range iterationManipulators {
 		if v.Code == code {
 			v.Manipulator.Stop()
@@ -222,4 +294,25 @@ func deleteIterationManipulator(c *gin.Context) {
 		}
 	}
 	c.Status(http.StatusOK)
+}
+
+func doPostgresPreparationForManipulator() {
+	result, _ := database.Query("" +
+		"CREATE TABLE IF NOT EXISTS manipulator (\n" +
+		"	code varchar(100) PRIMARY KEY,\n" +
+		"   duration varchar(30) NOT NULL,\n" +
+		"   value integer NOT NULL\n" +
+		");")
+	fmt.Println(result)
+}
+
+func prepareManipulator(route *gin.RouterGroup) {
+	doPostgresPreparationForManipulator()
+	loadIterationManipulators()
+
+	route.GET("", findAllIterationManipulators)
+	route.GET("/code/:code", findIterationManipulatorByCode)
+	route.POST("", createIterationManipulator)
+	route.PATCH("/code/:code", updateIterationManipulator)
+	route.DELETE("/code/:code", deleteIterationManipulator)
 }

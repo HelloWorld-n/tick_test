@@ -1,14 +1,18 @@
 package go_gin_pages
 
 import (
+	"database/sql"
 	"encoding/json"
 	"fmt"
+	"io"
 	"net/http"
 	"os"
 	"path/filepath"
+	"strings"
 	"sync"
 	"time"
 
+	"tick_test/sql_conn"
 	"tick_test/types"
 
 	"github.com/gin-gonic/gin"
@@ -20,10 +24,26 @@ type resultIndex struct {
 }
 
 var iteration int
+var database *sql.DB
 
 const iterationFile = "../.data/Iteration.json"
+const dbPathFile = "../.config/dbPath.txt"
 
 var iterationMutex sync.Mutex
+
+func loadDatabasePath() (url string, err error) {
+	url = ""
+	file, err := os.Open(dbPathFile)
+	if err != nil {
+		return
+	}
+	defer file.Close()
+
+	b, err := io.ReadAll(file)
+	url = string(b)
+
+	return
+}
 
 func loadIteration() error {
 	iterationMutex.Lock()
@@ -64,14 +84,6 @@ func saveIteration() error {
 	return nil
 }
 
-func Prepare(engine *gin.Engine) {
-	loadIteration()
-	engine.GET("/", index)
-	prepareManipulator(engine.Group("/manipulator"))
-	prepareSort(engine.Group("/sort"))
-	preparePassword(engine.Group("/password"))
-}
-
 func index(c *gin.Context) {
 	if err := loadIteration(); err != nil {
 		c.JSON(
@@ -90,4 +102,27 @@ func index(c *gin.Context) {
 			Iteration: iteration,
 		},
 	)
+}
+
+func doPostgresPreparation() {
+	databasePath, err := loadDatabasePath()
+	if err != nil {
+		return
+	}
+	databasePath = strings.TrimSpace(databasePath)
+	db, err := sql_conn.Prepare(databasePath)
+	if err != nil {
+		fmt.Println(err)
+	} else {
+		database = db
+	}
+}
+
+func Prepare(engine *gin.Engine) {
+	doPostgresPreparation()
+	loadIteration()
+	engine.GET("/", index)
+	prepareManipulator(engine.Group("/manipulator"))
+	prepareSort(engine.Group("/sort"))
+	preparePassword(engine.Group("/password"))
 }
