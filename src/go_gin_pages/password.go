@@ -11,15 +11,29 @@ import (
 
 var passwords []string = make([]string, 0)
 
-type passwordSimpleConfig struct {
+type PasswordSimpleConfig struct {
 	Size    int      `json:"Size"     binding:"omitempty,gt=0"`
 	MinSize int      `json:"MinSize"  binding:"omitempty,gt=0"`
 	MaxSize int      `json:"MaxSize"  binding:"omitempty,gtefield=MinSize"`
 	Charset []string `json:"Charset"  binding:"required,min=2,dive,required"`
 }
 
+type PasswordSimpleStackConfig []struct {
+	PasswordSimpleConfig
+	InclusionChances float64 `json:"InclusionChances" binding:"omitempty,min=0,max=1"`
+}
+
+func (conf PasswordSimpleStackConfig) extractPasswordSimpleConfig(i int) PasswordSimpleConfig {
+	return PasswordSimpleConfig{
+		Size:    conf[i].Size,
+		MinSize: conf[i].MinSize,
+		MaxSize: conf[i].MaxSize,
+		Charset: conf[i].Charset,
+	}
+}
+
 func passwordConfigStructLevelValidation(sl validator.StructLevel) {
-	config := sl.Current().Interface().(passwordSimpleConfig)
+	config := sl.Current().Interface().(PasswordSimpleConfig)
 
 	providedSize := config.Size > 0
 	providedMinAndMax := (config.MinSize > 0) && (config.MaxSize > 0)
@@ -44,7 +58,7 @@ func findAllPasswords(c *gin.Context) {
 	)
 }
 
-func determineSize(data passwordSimpleConfig) int {
+func determineSize(data PasswordSimpleConfig) int {
 	if data.Size > 0 {
 		return data.Size
 	} else {
@@ -52,7 +66,7 @@ func determineSize(data passwordSimpleConfig) int {
 	}
 }
 
-func createSimplePasswordFromParsedData(data passwordSimpleConfig) string {
+func createSimplePasswordFromParsedData(data PasswordSimpleConfig) string {
 	var password string = ""
 	for range determineSize(data) {
 		randomIndex := rand.Intn(len(data.Charset))
@@ -64,7 +78,7 @@ func createSimplePasswordFromParsedData(data passwordSimpleConfig) string {
 }
 
 func createSimplePassword(c *gin.Context) {
-	var data passwordSimpleConfig
+	var data PasswordSimpleConfig
 	if err := c.ShouldBindJSON(&data); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
@@ -81,18 +95,20 @@ func createSimplePassword(c *gin.Context) {
 }
 
 func createSimpleStackPassword(c *gin.Context) {
-	var data []passwordSimpleConfig
+	var data PasswordSimpleStackConfig
 	if err := c.ShouldBindJSON(&data); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	password := ""
-	for _, item := range data {
+	for i, item := range data {
 		if err := passwordValidator.Struct(item); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		password += createSimplePasswordFromParsedData(item)
+		if item.InclusionChances == 0 || rand.Float64() < item.InclusionChances {
+			password += createSimplePasswordFromParsedData(data.extractPasswordSimpleConfig(i))
+		}
 	}
 	c.JSON(
 		http.StatusCreated,
@@ -103,7 +119,7 @@ func createSimpleStackPassword(c *gin.Context) {
 var passwordValidator = validator.New()
 
 func preparePassword(route *gin.RouterGroup) {
-	passwordValidator.RegisterStructValidation(passwordConfigStructLevelValidation, passwordSimpleConfig{})
+	passwordValidator.RegisterStructValidation(passwordConfigStructLevelValidation, PasswordSimpleConfig{})
 
 	route.GET("", findAllPasswords)
 	route.POST("/simple", createSimplePassword)
