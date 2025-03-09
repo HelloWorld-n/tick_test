@@ -52,8 +52,18 @@ func determineSize(data passwordSimpleConfig) int {
 	}
 }
 
+func createSimplePasswordFromParsedData(data passwordSimpleConfig) string {
+	var password string = ""
+	for range determineSize(data) {
+		randomIndex := rand.Intn(len(data.Charset))
+		randomElement := (data.Charset)[randomIndex]
+		password = fmt.Sprint(password, randomElement)
+	}
+	passwords = append(passwords, password)
+	return password
+}
+
 func createSimplePassword(c *gin.Context) {
-	var password string
 	var data passwordSimpleConfig
 	if err := c.ShouldBindJSON(&data); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
@@ -63,13 +73,27 @@ func createSimplePassword(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	for range determineSize(data) {
-		randomIndex := rand.Intn(len(data.Charset))
-		randomElement := (data.Charset)[randomIndex]
-		password = fmt.Sprint(password, randomElement)
-	}
-	passwords = append(passwords, password)
+	password := createSimplePasswordFromParsedData(data)
+	c.JSON(
+		http.StatusCreated,
+		password,
+	)
+}
 
+func createSimpleStackPassword(c *gin.Context) {
+	var data []passwordSimpleConfig
+	if err := c.ShouldBindJSON(&data); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
+	}
+	password := ""
+	for _, item := range data {
+		if err := passwordValidator.Struct(item); err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			return
+		}
+		password += createSimplePasswordFromParsedData(item)
+	}
 	c.JSON(
 		http.StatusCreated,
 		password,
@@ -83,4 +107,5 @@ func preparePassword(route *gin.RouterGroup) {
 
 	route.GET("", findAllPasswords)
 	route.POST("/simple", createSimplePassword)
+	route.POST("/simple-stack", createSimpleStackPassword)
 }
