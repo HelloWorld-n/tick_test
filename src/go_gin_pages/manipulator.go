@@ -74,6 +74,9 @@ func loadIterationManipulatorsFromDatabase() error {
 }
 
 func saveIterationManipulatorToDatabase(obj *iterationManipulator) (err error) {
+	if database == nil {
+		return
+	}
 	query := `INSERT INTO manipulator (code, duration, value) VALUES ($1, $2, $3)`
 	_, err = database.Exec(query, obj.Code, obj.Data.Duration, obj.Data.Value)
 	return
@@ -204,6 +207,7 @@ func createIterationManipulator(c *gin.Context) {
 		Data:        data,
 		Manipulator: ticker,
 	}
+	ensureUniqueCodeForIterationManipulator(&iterationManipulator)
 	err = saveIterationManipulatorToDatabase(&iterationManipulator)
 	if err != nil {
 		fmt.Println(err)
@@ -214,6 +218,14 @@ func createIterationManipulator(c *gin.Context) {
 		http.StatusCreated,
 		iterationManipulator,
 	)
+}
+
+func ensureUniqueCodeForIterationManipulator(val *iterationManipulator) {
+	for _, item := range iterationManipulators {
+		if item.Code == val.Code {
+			val.Code = random.RandSeq(80)
+		}
+	}
 }
 
 func updateIterationManipulator(c *gin.Context) {
@@ -297,13 +309,15 @@ func deleteIterationManipulator(c *gin.Context) {
 }
 
 func doPostgresPreparationForManipulator() {
-	result, _ := database.Query("" +
-		"CREATE TABLE IF NOT EXISTS manipulator (\n" +
-		"	code varchar(100) PRIMARY KEY,\n" +
-		"   duration varchar(30) NOT NULL,\n" +
-		"   value integer NOT NULL\n" +
-		");")
-	fmt.Println(result)
+	if database != nil {
+		result, _ := database.Query("" +
+			"CREATE TABLE IF NOT EXISTS manipulator (\n" +
+			"	code varchar(100) PRIMARY KEY,\n" +
+			"   duration varchar(30) NOT NULL,\n" +
+			"   value integer NOT NULL\n" +
+			");")
+		fmt.Println(result)
+	}
 }
 
 func prepareManipulator(route *gin.RouterGroup) {
