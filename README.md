@@ -221,6 +221,13 @@ Request Body:
 > Use GET `/sort/code/`*code* to see result.
 
 ---
+
+### DELETE `/sort/calculative/delete-all`
+
+> Deletes all sorting information.
+
+---
+
 ## Manipulator Endpoints
 
 ---
