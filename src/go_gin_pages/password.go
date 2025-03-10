@@ -4,12 +4,21 @@ import (
 	"fmt"
 	"math/rand"
 	"net/http"
+	"strings"
+	"unicode"
 
 	"github.com/gin-gonic/gin"
 	"github.com/go-playground/validator"
 )
 
 var passwords []string = make([]string, 0)
+
+type runeChecker struct {
+	Score   int
+	Checker func(rune) bool
+}
+
+var runeCheckers = make([]runeChecker, 0)
 
 type PasswordSimpleConfig struct {
 	Size    int      `json:"Size"     binding:"omitempty,gt=0"`
@@ -55,6 +64,31 @@ func findAllPasswords(c *gin.Context) {
 	c.JSON(
 		http.StatusOK,
 		passwords,
+	)
+}
+
+func ratePassword(c *gin.Context) {
+	password := c.Param("password")
+	score := 0
+	passwordLen := len(password)
+	for _, pLen := range []int{5, 8, 14, 20} {
+		if passwordLen > pLen {
+			score += 1
+		} else {
+			break
+		}
+	}
+	for _, glyphChecker := range runeCheckers {
+		if strings.IndexFunc(password, glyphChecker.Checker) != -1 {
+			score += glyphChecker.Score
+		}
+	}
+	c.JSON(
+		http.StatusOK,
+		gin.H{
+			"Password": password,
+			"Score":    score,
+		},
 	)
 }
 
@@ -121,7 +155,25 @@ var passwordValidator = validator.New()
 func preparePassword(route *gin.RouterGroup) {
 	passwordValidator.RegisterStructValidation(passwordConfigStructLevelValidation, PasswordSimpleConfig{})
 
+	runeCheckers = append(runeCheckers, runeChecker{
+		Score:   3,
+		Checker: func(glyph rune) bool { return glyph > unicode.MaxASCII },
+	})
+	runeCheckers = append(runeCheckers, runeChecker{
+		Score:   1,
+		Checker: unicode.IsUpper,
+	})
+	runeCheckers = append(runeCheckers, runeChecker{
+		Score:   1,
+		Checker: unicode.IsLower,
+	})
+	runeCheckers = append(runeCheckers, runeChecker{
+		Score:   1,
+		Checker: unicode.IsSymbol,
+	})
+
 	route.GET("", findAllPasswords)
+	route.GET("/rate/:password", ratePassword)
 	route.POST("/simple", createSimplePassword)
 	route.POST("/simple-stack", createSimpleStackPassword)
 }

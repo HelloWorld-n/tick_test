@@ -8,6 +8,7 @@ import (
 
 func main() {
 	ginServer := gin.Default()
+	ginServer.UseRawPath = true
 	go_gin_pages.Prepare(ginServer)
 	ginServer.Run("127.0.0.1:4041")
 }
