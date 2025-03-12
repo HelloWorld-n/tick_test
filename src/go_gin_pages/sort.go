@@ -97,7 +97,7 @@ var absoluteIncrementalSort = makeSortFunction(
 
 var absoluteDecrementalSort = makeSortFunction(
 	func(a0 float64, a1 float64) bool {
-		return math.Abs(a0) < math.Abs(a1)
+		return math.Abs(a0) > math.Abs(a1)
 	},
 	"decrease-abs",
 )
@@ -243,6 +243,11 @@ func findAllStoredResult(c *gin.Context) {
 	c.JSON(http.StatusOK, intensiveCalculationResults)
 }
 
+func deleteAllStoredResults(c *gin.Context) {
+	intensiveCalculationResults = make([]*intensiveCalculationResult, 0)
+	c.JSON(http.StatusAccepted, nil)
+}
+
 func prepareSort(route *gin.RouterGroup) {
 	intensiveCalculationResults = make([]*intensiveCalculationResult, 0)
 
@@ -254,6 +259,7 @@ func prepareSort(route *gin.RouterGroup) {
 	route.POST("/increase-abs", absoluteIncrementalSort)
 	route.POST("/decrease-abs", absoluteDecrementalSort)
 	route.POST("/calculative/intensive", intensiveSort)
+	route.DELETE("/delete-all", deleteAllStoredResults)
 
 	registerSortType("calculative/calculate-once")
 	route.POST("/calculative/calculate-once", sortIntensivelyCalculatedObjectForComparation)
