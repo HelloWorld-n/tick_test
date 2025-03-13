@@ -17,6 +17,8 @@ import (
 
 var validSortTypes []string = make([]string, 0)
 
+var sortMutex sync.Mutex
+
 type intensiveCalculationResult struct {
 	Code        string
 	SortType    string
@@ -58,7 +60,11 @@ func makeSortFunction[T any](fn func(a0 T, a1 T) bool, sortType string) func(c *
 			StartedAt: startedAt.Format(time.RFC3339),
 			Result:    arr,
 		}
+
+		sortMutex.Lock()
 		intensiveCalculationResults = append(intensiveCalculationResults, calcResult)
+		sortMutex.Unlock()
+
 		c.ShouldBindBodyWithJSON(&arr)
 		go func() {
 			var wg sync.WaitGroup
@@ -66,9 +72,12 @@ func makeSortFunction[T any](fn func(a0 T, a1 T) bool, sortType string) func(c *
 			sorting.SimpleSort(arr, fn, &wg)
 			wg.Wait()
 			now := time.Now().UTC()
+
+			sortMutex.Lock()
 			calcResult.CompletedAt = now.Format(time.RFC3339)
 			calcResult.TimeTaken = (&iso8601duration.Duration{Duration: time.Time.Sub(now, startedAt)}).String()
 			calcResult.Result = arr
+			sortMutex.Unlock()
 		}()
 		c.JSON(http.StatusCreated, code)
 	}
@@ -141,10 +150,12 @@ func sortIntensiveCalculation(
 		arr = append(arr, item.Element)
 	}
 	now := time.Now().UTC()
+
+	sortMutex.Lock()
 	calcResult.CompletedAt = now.Format(time.RFC3339)
 	calcResult.TimeTaken = (&iso8601duration.Duration{Duration: time.Time.Sub(now, startedAt)}).String()
 	calcResult.Result = arr
-	calcResult.Result = arr
+	sortMutex.Unlock()
 }
 
 func sortIntensivelyCalculatedObjectForComparation(c *gin.Context) {
@@ -169,7 +180,10 @@ func sortIntensivelyCalculatedObjectForComparation(c *gin.Context) {
 		StartedAt: startedAt.Format(time.RFC3339),
 		Result:    arr,
 	}
+	sortMutex.Lock()
 	intensiveCalculationResults = append(intensiveCalculationResults, calcResult)
+	sortMutex.Unlock()
+
 	go sortIntensiveCalculation(cmpArr, calcResult, startedAt)
 
 	arr = make([]*[]float64, 0)
@@ -190,6 +204,8 @@ func fetchSortedMeta(meta *[]intensiveCalculationMeta, sortType string, wg *sync
 	totalTimeTaken := 0 * time.Nanosecond
 	var minTimeTaken time.Duration = math.MaxInt64
 	var maxTimeTaken time.Duration = math.MinInt64
+
+	sortMutex.Lock()
 	for _, val := range intensiveCalculationResults {
 		if val.SortType == sortType {
 			timeTaken, err := parseISO8601Duration(val.TimeTaken, 0*time.Nanosecond)
@@ -207,6 +223,8 @@ func fetchSortedMeta(meta *[]intensiveCalculationMeta, sortType string, wg *sync
 			totalTimeTaken += timeTaken
 		}
 	}
+	sortMutex.Unlock()
+
 	if metaSample.SampleSize > 0 {
 		metaSample.MinTimeTaken = (&iso8601duration.Duration{Duration: minTimeTaken}).String()
 		metaSample.MaxTimeTaken = (&iso8601duration.Duration{Duration: maxTimeTaken}).String()
@@ -217,11 +235,20 @@ func fetchSortedMeta(meta *[]intensiveCalculationMeta, sortType string, wg *sync
 
 func findStoredResult(c *gin.Context) {
 	code := c.Param("code")
+	var result *intensiveCalculationResult
+
+	sortMutex.Lock()
 	for _, v := range intensiveCalculationResults {
 		if v.Code == code {
-			c.JSON(http.StatusOK, v)
-			return
+			result = v
+			break
 		}
+	}
+	sortMutex.Unlock()
+
+	if result != nil {
+		c.JSON(http.StatusOK, result)
+		return
 	}
 	c.Status(http.StatusNoContent)
 }
@@ -240,16 +267,24 @@ func findStoredResultMeta(c *gin.Context) {
 }
 
 func findAllStoredResult(c *gin.Context) {
-	c.JSON(http.StatusOK, intensiveCalculationResults)
+	sortMutex.Lock()
+	results := make([]*intensiveCalculationResult, len(intensiveCalculationResults))
+	copy(results, intensiveCalculationResults)
+	sortMutex.Unlock()
+	c.JSON(http.StatusOK, results)
 }
 
 func deleteAllStoredResults(c *gin.Context) {
+	sortMutex.Lock()
 	intensiveCalculationResults = make([]*intensiveCalculationResult, 0)
+	sortMutex.Unlock()
 	c.JSON(http.StatusAccepted, nil)
 }
 
 func prepareSort(route *gin.RouterGroup) {
+	sortMutex.Lock()
 	intensiveCalculationResults = make([]*intensiveCalculationResult, 0)
+	sortMutex.Unlock()
 
 	route.GET("", findAllStoredResult)
 	route.GET("/meta", findStoredResultMeta)
