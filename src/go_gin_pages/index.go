@@ -125,4 +125,5 @@ func Prepare(engine *gin.Engine) {
 	prepareManipulator(engine.Group("/manipulator"))
 	prepareSort(engine.Group("/sort"))
 	preparePassword(engine.Group("/password"))
+	prepareAccount(engine.Group("/account"))
 }
