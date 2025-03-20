@@ -126,4 +126,5 @@ func Prepare(engine *gin.Engine) {
 	prepareSort(engine.Group("/sort"))
 	preparePassword(engine.Group("/password"))
 	prepareAccount(engine.Group("/account"))
+	prepareMessage(engine.Group("/message"))
 }
