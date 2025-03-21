@@ -37,14 +37,14 @@ func sendMessage(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
-	username := c.GetHeader("Username")
-	password := c.GetHeader("Password")
-	data.Message.From = username
-	if err := confirmAccount(username, password); err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"Error": "user authentication failed"})
+
+	username, err := confirmUserFromGinContext(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"Error": "user authentication failed; " + err.Error()})
 		return
 	}
 
+	data.Message.From = username
 	data.Message.When = types.ISO8601Date(time.Now().UTC().Format(time.RFC3339))
 
 	if err := saveMessage(&data.Message); err != nil {
@@ -60,10 +60,9 @@ func getMessages(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"Error": "database offline"})
 		return
 	}
-	username := c.GetHeader("Username")
-	password := c.GetHeader("Password")
-	if err := confirmAccount(username, password); err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"Error": "user authentication failed"})
+	username, err := confirmUserFromGinContext(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"Error": "user authentication failed; " + err.Error()})
 		return
 	}
 
@@ -93,10 +92,9 @@ func getSentMessages(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"Error": "database offline"})
 		return
 	}
-	username := c.GetHeader("Username")
-	password := c.GetHeader("Password")
-	if err := confirmAccount(username, password); err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"Error": "user authentication failed"})
+	username, err := confirmUserFromGinContext(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"Error": "user authentication failed; " + err.Error()})
 		return
 	}
 
@@ -126,10 +124,9 @@ func getReceivedMessages(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"Error": "database offline"})
 		return
 	}
-	username := c.GetHeader("Username")
-	password := c.GetHeader("Password")
-	if err := confirmAccount(username, password); err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"Error": "user authentication failed"})
+	username, err := confirmUserFromGinContext(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"Error": "user authentication failed; " + err.Error()})
 		return
 	}
 
