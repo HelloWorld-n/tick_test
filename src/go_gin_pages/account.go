@@ -118,11 +118,12 @@ func login(c *gin.Context) {
 
 func doPostgresPreparationForAccount() {
 	if database != nil {
-		result, _ := database.Exec("" +
-			"CREATE TABLE IF NOT EXISTS account (\n" +
-			"	username varchar(100) PRIMARY KEY,\n" +
-			"   password varchar(500) NOT NULL\n" +
-			");")
+		result, _ := database.Exec(`
+			CREATE TABLE IF NOT EXISTS account (
+				username varchar(100) PRIMARY KEY,
+				password varchar(500) NOT NULL
+			);
+		`)
 		fmt.Println(result)
 	}
 }

@@ -310,12 +310,13 @@ func deleteIterationManipulator(c *gin.Context) {
 
 func doPostgresPreparationForManipulator() {
 	if database != nil {
-		result, _ := database.Query("" +
-			"CREATE TABLE IF NOT EXISTS manipulator (\n" +
-			"	code varchar(100) PRIMARY KEY,\n" +
-			"   duration varchar(30) NOT NULL,\n" +
-			"   value integer NOT NULL\n" +
-			");")
+		result, _ := database.Query(`
+			CREATE TABLE IF NOT EXISTS manipulator (
+				code varchar(100) PRIMARY KEY,
+				duration varchar(30) NOT NULL,
+				value integer NOT NULL
+			);
+		`)
 		fmt.Println(result)
 	}
 }
