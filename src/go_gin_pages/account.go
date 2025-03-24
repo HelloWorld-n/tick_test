@@ -12,10 +12,16 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type accountData struct {
+type accountInputData struct {
 	Username     string `json:"Username" binding:"gt=4"`
 	Password     string `json:"Password" binding:"gt=8"`
 	SamePassword string `json:"SamePassword"`
+	Role         string `json:"Role"`
+}
+
+type accountOutputData struct {
+	Username string `json:"Username" binding:"gt=4"`
+	Role     string `json:"Role"`
 }
 
 type userTokenInfo struct {
@@ -74,10 +80,13 @@ func createAccount(c *gin.Context) {
 		)
 		return
 	}
-	var data accountData
+	var data accountInputData
 	if err := c.ShouldBindJSON(&data); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{`Error`: err.Error()})
 		return
+	}
+	if data.Role == "" {
+		data.Role = "User"
 	}
 	if err := saveAccount(&data); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{`Error`: err.Error()})
@@ -90,18 +99,66 @@ func createAccount(c *gin.Context) {
 	)
 }
 
-func saveAccount(obj *accountData) (err error) {
+func findAllAccounts() (data []accountOutputData, err error) {
+	query := `
+		SELECT 
+			username, 
+			(SELECT name FROM role WHERE acc.role_id = id)
+		FROM account acc;
+	`
+
+	rows, err := database.Query(query)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	data = make([]accountOutputData, 0)
+	for rows.Next() {
+		var account accountOutputData
+		if err := rows.Scan(&account.Username, &account.Role); err != nil {
+			return nil, err
+		}
+		data = append(data, account)
+	}
+
+	if err := rows.Err(); err != nil {
+		return nil, err
+	}
+
+	return data, nil
+}
+
+func getAllAccounts(c *gin.Context) {
+	accounts, err := findAllAccounts()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, accounts)
+}
+
+func saveAccount(obj *accountInputData) (err error) {
 	if obj.Password != obj.SamePassword {
 		err = errors.New("field `Password` differs from field `SamePassword`")
 		return
 	}
 
-	query := `INSERT INTO account (username, password) VALUES ($1, $2)`
+	query := `
+		INSERT INTO account (
+			username, 
+			password, 
+			role_id
+		) VALUES ($1, $2, (SELECT id FROM role WHERE name = $3));
+	`
 	hashedPassword, err := hashPassword(obj.Password)
 	if err != nil {
 		return
 	}
-	_, err = database.Exec(query, obj.Username, hashedPassword)
+	fmt.Println(obj.Role)
+	_, err = database.Exec(query, obj.Username, hashedPassword, obj.Role)
+
+	fmt.Println(err)
 	return
 }
 
@@ -158,7 +215,7 @@ func login(c *gin.Context) {
 		)
 		return
 	}
-	var data accountData
+	var data accountInputData
 	if err := c.ShouldBindJSON(&data); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
@@ -174,13 +231,43 @@ func login(c *gin.Context) {
 
 func doPostgresPreparationForAccount() {
 	if database != nil {
-		result, _ := database.Exec(`
+		result, err := database.Exec(`
 			CREATE TABLE IF NOT EXISTS account (
 				username varchar(100) PRIMARY KEY,
 				password varchar(500) NOT NULL
 			);
 		`)
-		fmt.Println(result)
+		fmt.Println(result, err)
+		result, err = database.Exec(`
+			CREATE TABLE IF NOT EXISTS role (
+				id SERIAL PRIMARY KEY,
+				name TEXT UNIQUE NOT NULL
+			);
+		`)
+		fmt.Println(result, err)
+		result, err = database.Exec(`
+			INSERT INTO role (name) VALUES
+				('User'),
+				('BookKeeper'),
+				('Admin')
+			ON CONFLICT (name) DO NOTHING;
+		`)
+		fmt.Println(result, err)
+		result, err = database.Exec(`
+			ALTER TABLE account ADD COLUMN IF NOT EXISTS role_id INT REFERENCES role(id);
+		`)
+		fmt.Println(result, err)
+		result, err = database.Exec(`
+			UPDATE account
+			SET role_id = (SELECT id FROM role WHERE name = 'User')
+			WHERE role_id IS NULL;
+		`)
+		fmt.Println(result, err)
+		result, err = database.Exec(`
+			ALTER TABLE account
+			ALTER COLUMN role_id SET NOT NULL;
+		`)
+		fmt.Println(result, err)
 	}
 }
 
@@ -189,4 +276,5 @@ func prepareAccount(route *gin.RouterGroup) {
 
 	route.POST("/register", createAccount)
 	route.POST("/login", login)
+	route.GET("/all", getAllAccounts)
 }
