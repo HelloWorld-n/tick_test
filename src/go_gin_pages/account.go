@@ -87,7 +87,12 @@ func createAccount(c *gin.Context) {
 		data.Role = "User"
 	}
 	if err := saveAccount(&data); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{`Error`: err.Error()})
+		status := http.StatusBadRequest
+		fmt.Println(err)
+		if errors.Is(err, ErrDoesExist) {
+			status = http.StatusConflict
+		}
+		c.JSON(status, gin.H{`Error`: err.Error()})
 		return
 	}
 
@@ -140,6 +145,16 @@ func saveAccount(obj *accountPostData) (err error) {
 	if obj.Password != obj.SamePassword {
 		err = errors.New("field `Password` differs from field `SamePassword`")
 		return
+	}
+
+	var exists bool
+	checkQuery := `SELECT EXISTS(SELECT 1 FROM account WHERE username = $1);`
+	err = database.QueryRow(checkQuery, obj.Username).Scan(&exists)
+	if err != nil {
+		return fmt.Errorf("error checking user existence: %w", err)
+	}
+	if exists {
+		return fmt.Errorf("%w; user with username %s", ErrDoesExist, obj.Username)
 	}
 
 	query := `
@@ -223,7 +238,21 @@ func patchAccount(c *gin.Context) {
 }
 
 func deleteAccount(c *gin.Context) {
-	username, err := confirmUserFromGinContext(c)
+	username := c.GetHeader("Username")
+
+	var exists bool
+	checkQuery := `SELECT EXISTS(SELECT 1 FROM account WHERE username = $1);`
+	err := database.QueryRow(checkQuery, username).Scan(&exists)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		return
+	}
+	if !exists {
+		c.JSON(http.StatusOK, nil)
+		return
+	}
+
+	username, err = confirmUserFromGinContext(c)
 	if err != nil {
 		c.JSON(http.StatusUnauthorized, gin.H{"Error": err.Error()})
 		return
@@ -233,7 +262,7 @@ func deleteAccount(c *gin.Context) {
 		c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 		return
 	}
-	c.JSON(http.StatusOK, nil)
+	c.JSON(http.StatusAccepted, nil)
 }
 
 func generateToken(username string) (token string) {

@@ -33,7 +33,8 @@ const urlFile = "../.congih/url.txt"
 
 var iterationMutex sync.Mutex
 
-var errDatabaseOffline = errors.New("database offline")
+var ErrDatabaseOffline = errors.New("database offline")
+var ErrDoesExist = errors.New("item already exists")
 
 func ensureDatabaseIsOK(fn func(*gin.Context)) func(c *gin.Context) {
 	return func(c *gin.Context) {
@@ -41,7 +42,7 @@ func ensureDatabaseIsOK(fn func(*gin.Context)) func(c *gin.Context) {
 			c.JSON(
 				http.StatusInternalServerError,
 				gin.H{
-					`Error`: errDatabaseOffline,
+					`Error`: ErrDatabaseOffline,
 				},
 			)
 			return
