@@ -12,14 +12,21 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type accountInputData struct {
+type accountPostData struct {
 	Username     string `json:"Username" binding:"gt=4"`
 	Password     string `json:"Password" binding:"gt=8"`
 	SamePassword string `json:"SamePassword"`
 	Role         string `json:"Role"`
 }
 
-type accountOutputData struct {
+type accountPatchData struct {
+	Username     string `json:"Username"`
+	Password     string `json:"Password"`
+	SamePassword string `json:"SamePassword"`
+	Role         string `json:"Role"`
+}
+
+type accountGetData struct {
 	Username string `json:"Username" binding:"gt=4"`
 	Role     string `json:"Role"`
 }
@@ -71,16 +78,7 @@ func confirmAccount(username string, password string) (err error) {
 }
 
 func createAccount(c *gin.Context) {
-	if database == nil {
-		c.JSON(
-			http.StatusInternalServerError,
-			gin.H{
-				`Error`: "database offline",
-			},
-		)
-		return
-	}
-	var data accountInputData
+	var data accountPostData
 	if err := c.ShouldBindJSON(&data); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{`Error`: err.Error()})
 		return
@@ -99,7 +97,7 @@ func createAccount(c *gin.Context) {
 	)
 }
 
-func findAllAccounts() (data []accountOutputData, err error) {
+func findAllAccounts() (data []accountGetData, err error) {
 	query := `
 		SELECT 
 			username, 
@@ -113,9 +111,9 @@ func findAllAccounts() (data []accountOutputData, err error) {
 	}
 	defer rows.Close()
 
-	data = make([]accountOutputData, 0)
+	data = make([]accountGetData, 0)
 	for rows.Next() {
-		var account accountOutputData
+		var account accountGetData
 		if err := rows.Scan(&account.Username, &account.Role); err != nil {
 			return nil, err
 		}
@@ -138,7 +136,7 @@ func getAllAccounts(c *gin.Context) {
 	c.JSON(http.StatusOK, accounts)
 }
 
-func saveAccount(obj *accountInputData) (err error) {
+func saveAccount(obj *accountPostData) (err error) {
 	if obj.Password != obj.SamePassword {
 		err = errors.New("field `Password` differs from field `SamePassword`")
 		return
@@ -160,6 +158,68 @@ func saveAccount(obj *accountInputData) (err error) {
 
 	fmt.Println(err)
 	return
+}
+
+func updateExistingAccount(username string, obj *accountPatchData) (err error) {
+	// verify valid input
+	var count int
+	err = database.QueryRow(`SELECT COUNT(*) FROM account WHERE username = $1`, username).Scan(&count)
+	if err != nil {
+		return err
+	}
+	if count == 0 {
+		return errors.New("no account found with the specified username")
+	}
+	if obj.Password != obj.SamePassword {
+		return errors.New("field `Password` differs from field `SamePassword`")
+	}
+	if obj.Password != "" && len(obj.Password) < 8 {
+		return errors.New("password is too short")
+	}
+
+	// apply changes
+	if obj.Password != "" {
+		hashedPassword, err := hashPassword(obj.Password)
+		if err != nil {
+			return err
+		}
+		_, err = database.Exec(`UPDATE account SET password = $1 WHERE username = $2`, hashedPassword, username)
+		if err != nil {
+			return err
+		}
+	}
+	if obj.Role != "" {
+		_, err = database.Exec(`UPDATE account SET role_id = (SELECT id FROM role WHERE name = $1) WHERE username = $2`, obj.Role, username)
+		if err != nil {
+			return err
+		}
+	}
+	if obj.Username != "" && obj.Username != username {
+		_, err = database.Exec(`UPDATE account SET username = $1 WHERE username = $2`, obj.Username, username)
+		if err != nil {
+			return err
+		}
+	}
+	return
+}
+
+func patchAccount(c *gin.Context) {
+	username, err := confirmUserFromGinContext(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"Error": err.Error()})
+		return
+	}
+	var data = new(accountPatchData)
+	if err := c.ShouldBindJSON(data); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		return
+	}
+	err = updateExistingAccount(username, data)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, nil)
 }
 
 func generateToken(username string) (token string) {
@@ -206,16 +266,7 @@ func confirmUserFromGinContext(c *gin.Context) (username string, err error) {
 }
 
 func login(c *gin.Context) {
-	if database == nil {
-		c.JSON(
-			http.StatusInternalServerError,
-			gin.H{
-				`Error`: "database offline",
-			},
-		)
-		return
-	}
-	var data accountInputData
+	var data accountPostData
 	if err := c.ShouldBindJSON(&data); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
@@ -274,7 +325,8 @@ func doPostgresPreparationForAccount() {
 func prepareAccount(route *gin.RouterGroup) {
 	doPostgresPreparationForAccount()
 
-	route.POST("/register", createAccount)
-	route.POST("/login", login)
-	route.GET("/all", getAllAccounts)
+	route.GET("/all", ensureDatabaseIsOK(getAllAccounts))
+	route.POST("/register", ensureDatabaseIsOK(createAccount))
+	route.POST("/login", ensureDatabaseIsOK(login))
+	route.PATCH("/modify", ensureDatabaseIsOK(patchAccount))
 }

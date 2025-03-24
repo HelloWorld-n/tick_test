@@ -3,6 +3,7 @@ package go_gin_pages
 import (
 	"database/sql"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -30,6 +31,23 @@ const iterationFile = "../.data/Iteration.json"
 const dbPathFile = "../.config/dbPath.txt"
 
 var iterationMutex sync.Mutex
+
+var errDatabaseOffline = errors.New("database offline")
+
+func ensureDatabaseIsOK(fn func(*gin.Context)) func(c *gin.Context) {
+	return func(c *gin.Context) {
+		if database == nil {
+			c.JSON(
+				http.StatusInternalServerError,
+				gin.H{
+					`Error`: errDatabaseOffline,
+				},
+			)
+			return
+		}
+		fn(c)
+	}
+}
 
 func loadDatabasePath() (url string, err error) {
 	url = ""
