@@ -118,7 +118,47 @@ func doPostgresPreparation() {
 	}
 }
 
-func Prepare(engine *gin.Engine) {
+type corsMiddleware struct {
+	origin string
+}
+
+func Prepare(engine *gin.Engine, url string) {
+	cmw := &corsMiddleware{
+		origin: url,
+	}
+
+	engine.Use(func(c *gin.Context) {
+		allowedOrigins := map[string]bool{
+			"http://" + cmw.origin:  true,
+			"https://" + cmw.origin: true,
+			"ws://" + cmw.origin:    true,
+			"wss://" + cmw.origin:   true,
+		}
+
+		requestOrigin := c.Request.Header.Get("Origin")
+		if allowedOrigins[requestOrigin] {
+			c.Writer.Header().Set("Access-Control-Allow-Origin", requestOrigin)
+			c.Writer.Header().Set("Vary", "Origin")
+		} else {
+			c.Writer.Header().Set("Access-Control-Allow-Origin", "null")
+		}
+
+		c.Writer.Header().Set("Content-Type", "application/json")
+		c.Writer.Header().Set("Content-Security-Policy", "connect-src 'self' "+requestOrigin)
+
+		if c.Request.Method == http.MethodOptions {
+			c.Writer.Header().Set("Access-Control-Allow-Credentials", "false")
+			c.Writer.Header().Set("Access-Control-Expose-Headers", "*")
+			c.Writer.Header().Set("Access-Control-Max-Age", "900")
+			c.Writer.Header().Set("Access-Control-Allow-Headers", "Content-Type, Origin, Accept, Authorization, X-Requested-With, Username, Password, User-Token")
+			c.Writer.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+			c.AbortWithStatus(204)
+			return
+		}
+
+		c.Next()
+	})
+
 	doPostgresPreparation()
 	loadIteration()
 	engine.GET("/", index)
