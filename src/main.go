@@ -7,7 +7,7 @@ import (
 )
 
 func main() {
-	url := "127.0.0.1:4041"
+	url, _ := go_gin_pages.DetermineURL()
 	ginServer := gin.Default()
 	ginServer.UseRawPath = true
 	go_gin_pages.Prepare(ginServer, url)

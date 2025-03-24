@@ -29,6 +29,7 @@ var database *sql.DB
 
 const iterationFile = "../.data/Iteration.json"
 const dbPathFile = "../.config/dbPath.txt"
+const urlFile = "../.congih/url.txt"
 
 var iterationMutex sync.Mutex
 
@@ -138,6 +139,21 @@ func doPostgresPreparation() {
 
 type corsMiddleware struct {
 	origin string
+}
+
+func DetermineURL() (url string, err error) {
+	url = "127.0.0.1:4041"
+	file, err := os.Open(urlFile)
+	if err != nil {
+		return
+	}
+	defer file.Close()
+
+	b, err := io.ReadAll(file)
+	if err == nil {
+		url = string(b)
+	}
+	return
 }
 
 func Prepare(engine *gin.Engine, url string) {
