@@ -222,6 +222,20 @@ func patchAccount(c *gin.Context) {
 	c.JSON(http.StatusOK, nil)
 }
 
+func deleteAccount(c *gin.Context) {
+	username, err := confirmUserFromGinContext(c)
+	if err != nil {
+		c.JSON(http.StatusUnauthorized, gin.H{"Error": err.Error()})
+		return
+	}
+	_, err = database.Exec(`DELETE FROM account WHERE username = $1`, username)
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, nil)
+}
+
 func generateToken(username string) (token string) {
 	token = random.RandSeq(80)
 	tokenStoreMutex.Lock()
@@ -329,4 +343,5 @@ func prepareAccount(route *gin.RouterGroup) {
 	route.POST("/register", ensureDatabaseIsOK(createAccount))
 	route.POST("/login", ensureDatabaseIsOK(login))
 	route.PATCH("/modify", ensureDatabaseIsOK(patchAccount))
+	route.DELETE("/delete", ensureDatabaseIsOK(deleteAccount))
 }
