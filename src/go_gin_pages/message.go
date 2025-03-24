@@ -171,8 +171,8 @@ func doPostgresPreparationForMessages() {
 func prepareMessage(route *gin.RouterGroup) {
 	doPostgresPreparationForMessages()
 
-	route.POST("/send", sendMessage)
-	route.GET("/user", getMessages)
-	route.GET("/sent-by", getSentMessages)
-	route.GET("/recv-by", getReceivedMessages)
+	route.POST("/send", ensureDatabaseIsOK(sendMessage))
+	route.GET("/user", ensureDatabaseIsOK(getMessages))
+	route.GET("/sent-by", ensureDatabaseIsOK(getSentMessages))
+	route.GET("/recv-by", ensureDatabaseIsOK(getReceivedMessages))
 }
