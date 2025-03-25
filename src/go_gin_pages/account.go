@@ -12,21 +12,21 @@ import (
 	"golang.org/x/crypto/bcrypt"
 )
 
-type accountPostData struct {
+type AccountPostData struct {
 	Username     string `json:"Username" binding:"gt=4"`
 	Password     string `json:"Password" binding:"gt=8"`
 	SamePassword string `json:"SamePassword"`
 	Role         string `json:"Role"`
 }
 
-type accountPatchData struct {
+type AccountPatchData struct {
 	Username     string `json:"Username"`
 	Password     string `json:"Password"`
 	SamePassword string `json:"SamePassword"`
 	Role         string `json:"Role"`
 }
 
-type accountGetData struct {
+type AccountGetData struct {
 	Username string `json:"Username" binding:"gt=4"`
 	Role     string `json:"Role"`
 }
@@ -78,7 +78,7 @@ func confirmAccount(username string, password string) (err error) {
 }
 
 func createAccount(c *gin.Context) {
-	var data accountPostData
+	var data AccountPostData
 	if err := c.ShouldBindJSON(&data); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{`Error`: err.Error()})
 		return
@@ -102,7 +102,7 @@ func createAccount(c *gin.Context) {
 	)
 }
 
-func findAllAccounts() (data []accountGetData, err error) {
+func findAllAccounts() (data []AccountGetData, err error) {
 	query := `
 		SELECT 
 			username, 
@@ -116,9 +116,9 @@ func findAllAccounts() (data []accountGetData, err error) {
 	}
 	defer rows.Close()
 
-	data = make([]accountGetData, 0)
+	data = make([]AccountGetData, 0)
 	for rows.Next() {
-		var account accountGetData
+		var account AccountGetData
 		if err := rows.Scan(&account.Username, &account.Role); err != nil {
 			return nil, err
 		}
@@ -141,7 +141,7 @@ func getAllAccounts(c *gin.Context) {
 	c.JSON(http.StatusOK, accounts)
 }
 
-func saveAccount(obj *accountPostData) (err error) {
+func saveAccount(obj *AccountPostData) (err error) {
 	if obj.Password != obj.SamePassword {
 		err = errors.New("field `Password` differs from field `SamePassword`")
 		return
@@ -175,7 +175,7 @@ func saveAccount(obj *accountPostData) (err error) {
 	return
 }
 
-func updateExistingAccount(username string, obj *accountPatchData) (err error) {
+func updateExistingAccount(username string, obj *AccountPatchData) (err error) {
 	// verify valid input
 	var count int
 	err = database.QueryRow(`SELECT COUNT(*) FROM account WHERE username = $1`, username).Scan(&count)
@@ -224,7 +224,7 @@ func patchAccount(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"Error": err.Error()})
 		return
 	}
-	var data = new(accountPatchData)
+	var data = new(AccountPatchData)
 	if err := c.ShouldBindJSON(data); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
@@ -309,7 +309,7 @@ func confirmUserFromGinContext(c *gin.Context) (username string, err error) {
 }
 
 func login(c *gin.Context) {
-	var data accountPostData
+	var data AccountPostData
 	if err := c.ShouldBindJSON(&data); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return

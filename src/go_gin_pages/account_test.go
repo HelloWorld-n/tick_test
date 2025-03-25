@@ -59,11 +59,11 @@ func accountCreator(accPos int, isSamePassword bool) (result func(t *testing.T))
 			samePassword = "VERIFICATION/" + random.RandSeq(30)
 		}
 		body, _ := json.Marshal(
-			map[string]interface{}{
-				"Username":     accounts[accPos].Username,
-				"Password":     accounts[accPos].Password,
-				"SamePassword": samePassword,
-				"Role":         accounts[accPos].Role,
+			go_gin_pages.AccountPostData{
+				Username:     accounts[accPos].Username,
+				Password:     accounts[accPos].Password,
+				SamePassword: samePassword,
+				Role:         accounts[accPos].Role,
 			},
 		)
 		req, err := http.NewRequest(http.MethodPost, "http://"+url+"/account/register", bytes.NewBuffer(body))
