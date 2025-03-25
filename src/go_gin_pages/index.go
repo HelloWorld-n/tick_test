@@ -35,6 +35,7 @@ var iterationMutex sync.Mutex
 
 var ErrDatabaseOffline = errors.New("database offline")
 var ErrDoesExist = errors.New("item already exists")
+var ErrBadRequest = errors.New("bad request")
 
 func ensureDatabaseIsOK(fn func(*gin.Context)) func(c *gin.Context) {
 	return func(c *gin.Context) {

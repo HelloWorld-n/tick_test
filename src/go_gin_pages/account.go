@@ -143,8 +143,7 @@ func getAllAccounts(c *gin.Context) {
 
 func saveAccount(obj *AccountPostData) (err error) {
 	if obj.Password != obj.SamePassword {
-		err = errors.New("field `Password` differs from field `SamePassword`")
-		return
+		return fmt.Errorf("%w: field `Password` differs from field `SamePassword`", ErrBadRequest)
 	}
 
 	var exists bool
@@ -186,10 +185,11 @@ func updateExistingAccount(username string, obj *AccountPatchData) (err error) {
 		return errors.New("no account found with the specified username")
 	}
 	if obj.Password != obj.SamePassword {
-		return errors.New("field `Password` differs from field `SamePassword`")
+		return fmt.Errorf("%w: field `Password` differs from field `SamePassword`", ErrBadRequest)
 	}
 	if obj.Password != "" && len(obj.Password) < 8 {
-		return errors.New("password is too short")
+		return fmt.Errorf("%w: field `Password` is too short; excepted lenght at least 8", ErrBadRequest)
+
 	}
 
 	// apply changes
@@ -231,7 +231,11 @@ func patchAccount(c *gin.Context) {
 	}
 	err = updateExistingAccount(username, data)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		status := http.StatusInternalServerError
+		if errors.Is(err, ErrBadRequest) {
+			status = http.StatusBadRequest
+		}
+		c.JSON(status, gin.H{"Error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, nil)
@@ -244,7 +248,11 @@ func deleteAccount(c *gin.Context) {
 	checkQuery := `SELECT EXISTS(SELECT 1 FROM account WHERE username = $1);`
 	err := database.QueryRow(checkQuery, username).Scan(&exists)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		status := http.StatusInternalServerError
+		if errors.Is(err, ErrBadRequest) {
+			status = http.StatusBadRequest
+		}
+		c.JSON(status, gin.H{"Error": err.Error()})
 		return
 	}
 	if !exists {
@@ -309,16 +317,13 @@ func confirmUserFromGinContext(c *gin.Context) (username string, err error) {
 }
 
 func login(c *gin.Context) {
-	var data AccountPostData
-	if err := c.ShouldBindJSON(&data); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
-		return
-	}
-	if err := confirmAccount(data.Username, data.Password); err != nil {
+	username := c.GetHeader("Username")
+	password := c.GetHeader("Password")
+	if err := confirmAccount(username, password); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	} else {
-		token := generateToken(data.Username)
+		token := generateToken(username)
 		c.JSON(http.StatusOK, token)
 	}
 }
