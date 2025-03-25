@@ -13,9 +13,6 @@ import (
 	"gopkg.in/go-playground/assert.v1"
 )
 
-var url string
-var client *http.Client
-
 type accountData struct {
 	Username  string
 	Password  string
@@ -25,9 +22,8 @@ type accountData struct {
 
 var accounts []accountData
 
-func setup() {
-	url, _ = go_gin_pages.DetermineURL()
-	client = &http.Client{}
+func setupAccount() {
+	setupIndex()
 	accounts = make([]accountData, 0)
 }
 
@@ -42,20 +38,6 @@ func createAccounts(n int) (prevN int) {
 		accounts = append(accounts, account)
 	}
 	return
-}
-
-func fmtPrintlnRespone(resp *http.Response) {
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		fmt.Println("Error reading response:", err)
-		return
-	}
-
-	resp.Body = io.NopCloser(bytes.NewReader(data))
-	fmt.Println()
-	fmt.Println(resp.Status)
-	fmt.Println(string(data))
-	fmt.Println()
 }
 
 func accountCreator(accPos int, isSamePassword bool) (result func(t *testing.T)) {
@@ -74,12 +56,12 @@ func accountCreator(accPos int, isSamePassword bool) (result func(t *testing.T))
 		)
 		req, err := http.NewRequest(http.MethodPost, "http://"+url+"/account/register", bytes.NewBuffer(body))
 		if err != nil {
-			t.Fatalf("Failed to create request: %v", err)
+			t.Fatalf("failed to create request: %v", err)
 		}
 		req.Header.Set("Content-Type", "application/json")
 		resp, err := client.Do(req)
 		if err != nil {
-			t.Fatalf("Request failed: %v", err)
+			t.Fatalf("request failed: %v", err)
 		}
 		defer resp.Body.Close()
 
@@ -104,7 +86,7 @@ func accountPatcher(accPos int, newRole string, newPassword string, confirmNewPa
 	return func(t *testing.T) {
 		token, err := accountLogin(accPos, true)
 		if err != nil {
-			t.Fatalf("Failed to login: %v", err)
+			t.Fatalf("failed to login: %v", err)
 		}
 		patchPayload := go_gin_pages.AccountPatchData{
 			Role:         newRole,
@@ -114,13 +96,13 @@ func accountPatcher(accPos int, newRole string, newPassword string, confirmNewPa
 		body, _ := json.Marshal(patchPayload)
 		req, err := http.NewRequest(http.MethodPatch, "http://"+url+"/account/modify", bytes.NewBuffer(body))
 		if err != nil {
-			t.Fatalf("Failed to create patch request: %v", err)
+			t.Fatalf("failed to create patch request: %v", err)
 		}
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("User-Token", token)
 		resp, err := client.Do(req)
 		if err != nil {
-			t.Fatalf("Patch request failed: %v", err)
+			t.Fatalf("patch request failed: %v", err)
 		}
 		defer resp.Body.Close()
 
@@ -175,7 +157,7 @@ func accountDeleter(accPos int) (result func(t *testing.T)) {
 	return func(t *testing.T) {
 		req, err := http.NewRequest(http.MethodDelete, "http://"+url+"/account/delete", bytes.NewBuffer([]byte{}))
 		if err != nil {
-			t.Fatalf("Failed to create request: %v", err)
+			t.Fatalf("failed to create request: %v", err)
 		}
 		req.Header.Set("Content-Type", "application/json")
 		req.Header.Set("Username", accounts[accPos].Username)
@@ -232,7 +214,7 @@ func TestPatchAccount(t *testing.T) {
 	accounts[accPos].Password = newPassword
 	t.Run("Login With Updated Password", accountLoginer(accPos, true))
 
-	t.Run("Invalid Patch - Mismatched Passwords", accountPatcher(accPos, newRole, newPassword, "MismatchedPassword"))
+	t.Run("Failure/MismatchedPasswords", accountPatcher(accPos, newRole, newPassword, "MismatchedPassword"))
 }
 
 func TestDeleteAccount(t *testing.T) {
@@ -240,15 +222,15 @@ func TestDeleteAccount(t *testing.T) {
 	accPos := createAccounts(2)
 
 	for i := range 2 {
-		t.Run("-", accountCreator(accPos+i, true))
+		t.Run("CreateForDeletion", accountCreator(accPos+i, true))
 	}
 
 	for i := range 2 {
-		t.Run("-", accountDeleter(accPos+i))
+		t.Run("DeleteExisting", accountDeleter(accPos+i))
 	}
 
 	for i := range 2 {
-		t.Run("-", accountDeleter(accPos+i))
+		t.Run("DeleteMissing", accountDeleter(accPos+i))
 	}
 
 }

@@ -36,6 +36,7 @@ var iterationMutex sync.Mutex
 var ErrDatabaseOffline = errors.New("database offline")
 var ErrDoesExist = errors.New("item already exists")
 var ErrBadRequest = errors.New("bad request")
+var ErrMissingField = fmt.Errorf("%w: field missing", ErrBadRequest)
 
 func ensureDatabaseIsOK(fn func(*gin.Context)) func(c *gin.Context) {
 	return func(c *gin.Context) {
@@ -203,4 +204,5 @@ func Prepare(engine *gin.Engine, url string) {
 	preparePassword(engine.Group("/password"))
 	prepareAccount(engine.Group("/account"))
 	prepareMessage(engine.Group("/message"))
+	prepareBook(engine.Group("/book"))
 }
