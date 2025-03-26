@@ -55,181 +55,6 @@ func confirmPassword(password string, hash string) (err error) {
 	return
 }
 
-func confirmAccount(username string, password string) (err error) {
-	query := `SELECT password FROM account WHERE $1 = username`
-
-	rows, err := database.Query(query, username)
-	if err != nil {
-		return
-	}
-	defer rows.Close()
-
-	if rows.Next() {
-		var hash string
-		if err = rows.Scan(&hash); err != nil {
-			return
-		}
-		err = confirmPassword(password, hash)
-		return
-	}
-
-	if err = rows.Err(); err != nil {
-		return
-	}
-	err = errors.New("unable to find user with given username")
-	return
-}
-
-func createAccount(c *gin.Context) {
-	var data AccountPostData
-	if err := c.ShouldBindJSON(&data); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{`Error`: err.Error()})
-		return
-	}
-	if data.Role == "" {
-		data.Role = "User"
-	}
-	if err := saveAccount(&data); err != nil {
-		status := http.StatusBadRequest
-		if errors.Is(err, ErrDoesExist) {
-			status = http.StatusConflict
-		}
-		c.JSON(status, gin.H{`Error`: err.Error()})
-		return
-	}
-
-	c.JSON(
-		http.StatusCreated,
-		data,
-	)
-}
-
-func findAllAccounts() (data []AccountGetData, err error) {
-	query := `
-		SELECT 
-			username, 
-			(SELECT name FROM role WHERE acc.role_id = id)
-		FROM account acc;
-	`
-
-	rows, err := database.Query(query)
-	if err != nil {
-		return nil, err
-	}
-	defer rows.Close()
-
-	data = make([]AccountGetData, 0)
-	for rows.Next() {
-		var account AccountGetData
-		if err := rows.Scan(&account.Username, &account.Role); err != nil {
-			return nil, err
-		}
-		data = append(data, account)
-	}
-
-	if err := rows.Err(); err != nil {
-		return nil, err
-	}
-
-	return data, nil
-}
-
-func getAllAccounts(c *gin.Context) {
-	accounts, err := findAllAccounts()
-	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-		return
-	}
-	c.JSON(http.StatusOK, accounts)
-}
-
-func saveAccount(obj *AccountPostData) (err error) {
-	if obj.Password != obj.SamePassword {
-		return fmt.Errorf("%w: field `Password` differs from field `SamePassword`", ErrBadRequest)
-	}
-
-	var exists bool
-	checkQuery := `SELECT EXISTS(SELECT 1 FROM account WHERE username = $1);`
-	err = database.QueryRow(checkQuery, obj.Username).Scan(&exists)
-	if err != nil {
-		return fmt.Errorf("error checking user existence: %w", err)
-	}
-	if exists {
-		return fmt.Errorf("%w; user with username %s", ErrDoesExist, obj.Username)
-	}
-
-	query := `
-		INSERT INTO account (
-			username, 
-			password, 
-			role_id
-		) VALUES ($1, $2, (SELECT id FROM role WHERE name = $3));
-	`
-	hashedPassword, err := hashPassword(obj.Password)
-	if err != nil {
-		return
-	}
-
-	_, err = database.Exec(query, obj.Username, hashedPassword, obj.Role)
-
-	return
-}
-
-func updateExistingAccount(username string, obj *AccountPatchData) (err error) {
-	// verify valid input
-	var count int
-	err = database.QueryRow(`SELECT COUNT(*) FROM account WHERE username = $1`, username).Scan(&count)
-	if err != nil {
-		return err
-	}
-	if count == 0 {
-		return errors.New("no account found with the specified username")
-	}
-	if obj.Password != obj.SamePassword {
-		return fmt.Errorf("%w: field `Password` differs from field `SamePassword`", ErrBadRequest)
-	}
-	if obj.Password != "" && len(obj.Password) < 8 {
-		return fmt.Errorf("%w: field `Password` is too short; excepted lenght at least 8", ErrBadRequest)
-	}
-
-	// apply changes
-	if obj.Password != "" {
-		hashedPassword, err := hashPassword(obj.Password)
-		if err != nil {
-			return err
-		}
-		_, err = database.Exec(`UPDATE account SET password = $1 WHERE username = $2`, hashedPassword, username)
-		if err != nil {
-			return err
-		}
-	}
-	if obj.Username != "" && obj.Username != username {
-		_, err = database.Exec(`UPDATE account SET username = $1 WHERE username = $2`, obj.Username, username)
-		if err != nil {
-			return err
-		}
-	}
-	return
-}
-
-func promoteExistingAccount(obj *AccountPatchPromoteData) (err error) {
-	// verify valid input
-	var count int
-	err = database.QueryRow(`SELECT COUNT(*) FROM account WHERE username = $1`, obj.Username).Scan(&count)
-	if err != nil {
-		return err
-	}
-
-	// apply changes
-	if obj.Role != "" {
-		_, err = database.Exec(`UPDATE account SET role_id = (SELECT id FROM role WHERE name = $1) WHERE username = $2`, obj.Role, obj.Username)
-		if err != nil {
-			return err
-		}
-	}
-	return
-}
-
 func patchPromoteAccount(c *gin.Context) {
 	// verify privileges
 	_, role, err := confirmAccountFromGinContext(c)
@@ -258,7 +83,7 @@ func patchPromoteAccount(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
-	promoteExistingAccount(data)
+	PromoteExistingAccount(data)
 }
 
 func patchAccount(c *gin.Context) {
@@ -272,7 +97,7 @@ func patchAccount(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
-	err = updateExistingAccount(username, data)
+	err = UpdateExistingAccount(username, data)
 	if err != nil {
 		status := http.StatusInternalServerError
 		if errors.Is(err, ErrBadRequest) {
@@ -348,7 +173,7 @@ func confirmUserFromGinContext(c *gin.Context) (username string, err error) {
 	if c.GetHeader("Password") != "" {
 		username = c.GetHeader("Username")
 		password := c.GetHeader("Password")
-		err = confirmAccount(username, password)
+		err = ConfirmAccount(username, password)
 		return
 	}
 	if token := c.GetHeader("User-Token"); token != "" {
@@ -383,7 +208,7 @@ func confirmAccountFromGinContext(c *gin.Context) (username string, role string,
 func login(c *gin.Context) {
 	username := c.GetHeader("Username")
 	password := c.GetHeader("Password")
-	if err := confirmAccount(username, password); err != nil {
+	if err := ConfirmAccount(username, password); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	} else {
@@ -392,53 +217,20 @@ func login(c *gin.Context) {
 	}
 }
 
-func doPostgresPreparationForAccount() {
-	if database != nil {
-		result, err := database.Exec(`
-			CREATE TABLE IF NOT EXISTS account (
-				username varchar(100) PRIMARY KEY,
-				password varchar(500) NOT NULL
-			);
-		`)
-		fmt.Println(result, err)
-		result, err = database.Exec(`
-			CREATE TABLE IF NOT EXISTS role (
-				id SERIAL PRIMARY KEY,
-				name TEXT UNIQUE NOT NULL
-			);
-		`)
-		fmt.Println(result, err)
-		result, err = database.Exec(`
-			INSERT INTO role (name) VALUES
-				('User'),
-				('BookKeeper'),
-				('Admin')
-			ON CONFLICT (name) DO NOTHING;
-		`)
-		fmt.Println(result, err)
-		result, err = database.Exec(`
-			ALTER TABLE account ADD COLUMN IF NOT EXISTS role_id INT REFERENCES role(id);
-		`)
-		fmt.Println(result, err)
-		result, err = database.Exec(`
-			UPDATE account
-			SET role_id = (SELECT id FROM role WHERE name = 'User')
-			WHERE role_id IS NULL;
-		`)
-		fmt.Println(result, err)
-		result, err = database.Exec(`
-			ALTER TABLE account
-			ALTER COLUMN role_id SET NOT NULL;
-		`)
-		fmt.Println(result, err)
+func getAllAccounts(c *gin.Context) {
+	accounts, err := FindAllAccounts()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
 	}
+	c.JSON(http.StatusOK, accounts)
 }
 
 func prepareAccount(route *gin.RouterGroup) {
 	doPostgresPreparationForAccount()
 
 	route.GET("/all", ensureDatabaseIsOK(getAllAccounts))
-	route.POST("/register", ensureDatabaseIsOK(createAccount))
+	route.POST("/register", ensureDatabaseIsOK(CreateAccount))
 	route.POST("/login", ensureDatabaseIsOK(login))
 	route.PATCH("/modify", ensureDatabaseIsOK(patchAccount))
 	route.PATCH("/promote", ensureDatabaseIsOK(patchPromoteAccount))
