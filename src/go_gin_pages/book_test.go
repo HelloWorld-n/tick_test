@@ -25,6 +25,16 @@ func setupBook() {
 	books = make([]bookData, 0)
 }
 
+func setAuthHeaders(req *http.Request, t *testing.T) {
+	username := adminCredentials.Username
+	password := adminCredentials.Password
+	if username == "" || password == "" {
+		t.Fatal("TEST_USERNAME and TEST_PASSWORD variables must be set in file ", adminCredentialsPath)
+	}
+	req.Header.Set("Username", username)
+	req.Header.Set("Password", password)
+}
+
 func bookCreator(title, author string) func(*testing.T) {
 	return func(t *testing.T) {
 		book := bookData{
@@ -38,6 +48,7 @@ func bookCreator(title, author string) func(*testing.T) {
 			t.Fatalf("failed to create request: %v", err)
 		}
 		req.Header.Set("Content-Type", "application/json")
+		setAuthHeaders(req, t)
 		fmt.Println(req)
 		resp, err := client.Do(req)
 		if err != nil {
@@ -68,6 +79,7 @@ func bookFetcher(book bookData) func(*testing.T) {
 		if err != nil {
 			t.Fatalf("failed to create request: %v", err)
 		}
+		setAuthHeaders(req, t)
 		resp, err := client.Do(req)
 		if err != nil {
 			t.Fatalf("request failed: %v", err)
@@ -100,6 +112,7 @@ func bookUpdater(code, newTitle, newAuthor string) func(*testing.T) {
 			t.Fatalf("failed to create request: %v", err)
 		}
 		req.Header.Set("Content-Type", "application/json")
+		setAuthHeaders(req, t)
 		resp, err := client.Do(req)
 		if err != nil {
 			t.Fatalf("request failed: %v", err)
@@ -129,6 +142,7 @@ func bookDeleter(code string) func(*testing.T) {
 		if err != nil {
 			t.Fatalf("failed to create request: %v", err)
 		}
+		setAuthHeaders(req, t)
 		resp, err := client.Do(req)
 		if err != nil {
 			t.Fatalf("request failed: %v", err)

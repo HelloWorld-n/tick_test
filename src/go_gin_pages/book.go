@@ -185,12 +185,68 @@ func doPostgresPreparationForBook() {
 	}
 }
 
+func getUserRole(username string) (string, error) {
+	var role string
+	query := `
+		SELECT r.name 
+		FROM account a 
+		JOIN role r ON a.role_id = r.id 
+		WHERE a.username = $1
+	`
+	err := database.QueryRow(query, username).Scan(&role)
+	if err != nil {
+		return "", err
+	}
+	return role, nil
+}
+
+func roleRequirer(handler gin.HandlerFunc, roles []string) (fn func(c *gin.Context)) {
+	return func(c *gin.Context) {
+		username, err := confirmUserFromGinContext(c)
+		if err != nil {
+			c.JSON(http.StatusUnauthorized, gin.H{"Error": err.Error()})
+			c.Abort()
+			return
+		}
+
+		userRole, err := getUserRole(username)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"Error": "failed to retrieve user role"})
+			c.Abort()
+			return
+		}
+
+		ok := false
+		for _, role := range roles {
+			if role == userRole {
+				ok = true
+				break
+			}
+		}
+
+		if !ok {
+			c.JSON(http.StatusForbidden, gin.H{
+				"Error":      "user does not have the required role",
+				"ValidRoles": roles,
+			})
+			c.Abort()
+			return
+		}
+
+		handler(c)
+	}
+}
+
+func requireBookKeeperRole(handler gin.HandlerFunc) gin.HandlerFunc {
+	return roleRequirer(handler, []string{"Admin", "BookKeeper"})
+}
+
 func prepareBook(route *gin.RouterGroup) {
 	doPostgresPreparationForBook()
 
 	route.GET("/all", ensureDatabaseIsOK(getAllBooks))
 	route.GET("/code/:code", ensureDatabaseIsOK(getBook))
-	route.POST("/create", ensureDatabaseIsOK(createBook))
-	route.PATCH("/code/:code", ensureDatabaseIsOK(patchBook))
-	route.DELETE("/code/:code", ensureDatabaseIsOK(deleteBook))
+	route.POST("/create", ensureDatabaseIsOK(requireBookKeeperRole(createBook)))
+	route.PATCH("/code/:code", ensureDatabaseIsOK(requireBookKeeperRole(patchBook)))
+	route.DELETE("/code/:code", ensureDatabaseIsOK(requireBookKeeperRole(deleteBook)))
 }
