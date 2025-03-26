@@ -82,14 +82,13 @@ func accountCreator(accPos int, isSamePassword bool) (result func(t *testing.T))
 	}
 }
 
-func accountPatcher(accPos int, newRole string, newPassword string, confirmNewPassword string) (result func(t *testing.T)) {
+func accountPatcher(accPos int, newPassword string, confirmNewPassword string) (result func(t *testing.T)) {
 	return func(t *testing.T) {
 		token, err := accountLogin(accPos, true)
 		if err != nil {
 			t.Fatalf("failed to login: %v", err)
 		}
 		patchPayload := go_gin_pages.AccountPatchData{
-			Role:         newRole,
 			Password:     newPassword,
 			SamePassword: confirmNewPassword,
 		}
@@ -207,14 +206,13 @@ func TestPatchAccount(t *testing.T) {
 	accPos := createAccounts(1)
 	t.Run("Register", accountCreator(accPos, true))
 
-	newRole := "Admin"
 	newPassword := "VERIFICATION/" + random.RandSeq(30)
-	t.Run("Valid Patch", accountPatcher(accPos, newRole, newPassword, newPassword))
+	t.Run("Valid Patch", accountPatcher(accPos, newPassword, newPassword))
 
 	accounts[accPos].Password = newPassword
 	t.Run("Login With Updated Password", accountLoginer(accPos, true))
 
-	t.Run("Failure/MismatchedPasswords", accountPatcher(accPos, newRole, newPassword, "MismatchedPassword"))
+	t.Run("Failure/MismatchedPasswords", accountPatcher(accPos, newPassword, "MismatchedPassword"))
 }
 
 func TestDeleteAccount(t *testing.T) {

@@ -23,7 +23,11 @@ type AccountPatchData struct {
 	Username     string `json:"Username"`
 	Password     string `json:"Password"`
 	SamePassword string `json:"SamePassword"`
-	Role         string `json:"Role"`
+}
+
+type AccountPatchPromoteData struct {
+	Username string `json:"Username" binding:"required"`
+	Role     string `json:"Role" binding:"required"`
 }
 
 type AccountGetData struct {
@@ -65,7 +69,6 @@ func confirmAccount(username string, password string) (err error) {
 		if err = rows.Scan(&hash); err != nil {
 			return
 		}
-		fmt.Println(hash)
 		err = confirmPassword(password, hash)
 		return
 	}
@@ -88,7 +91,6 @@ func createAccount(c *gin.Context) {
 	}
 	if err := saveAccount(&data); err != nil {
 		status := http.StatusBadRequest
-		fmt.Println(err)
 		if errors.Is(err, ErrDoesExist) {
 			status = http.StatusConflict
 		}
@@ -167,10 +169,9 @@ func saveAccount(obj *AccountPostData) (err error) {
 	if err != nil {
 		return
 	}
-	fmt.Println(obj.Role)
+
 	_, err = database.Exec(query, obj.Username, hashedPassword, obj.Role)
 
-	fmt.Println(err)
 	return
 }
 
@@ -189,7 +190,6 @@ func updateExistingAccount(username string, obj *AccountPatchData) (err error) {
 	}
 	if obj.Password != "" && len(obj.Password) < 8 {
 		return fmt.Errorf("%w: field `Password` is too short; excepted lenght at least 8", ErrBadRequest)
-
 	}
 
 	// apply changes
@@ -203,12 +203,6 @@ func updateExistingAccount(username string, obj *AccountPatchData) (err error) {
 			return err
 		}
 	}
-	if obj.Role != "" {
-		_, err = database.Exec(`UPDATE account SET role_id = (SELECT id FROM role WHERE name = $1) WHERE username = $2`, obj.Role, username)
-		if err != nil {
-			return err
-		}
-	}
 	if obj.Username != "" && obj.Username != username {
 		_, err = database.Exec(`UPDATE account SET username = $1 WHERE username = $2`, obj.Username, username)
 		if err != nil {
@@ -216,6 +210,55 @@ func updateExistingAccount(username string, obj *AccountPatchData) (err error) {
 		}
 	}
 	return
+}
+
+func promoteExistingAccount(obj *AccountPatchPromoteData) (err error) {
+	// verify valid input
+	var count int
+	err = database.QueryRow(`SELECT COUNT(*) FROM account WHERE username = $1`, obj.Username).Scan(&count)
+	if err != nil {
+		return err
+	}
+
+	// apply changes
+	if obj.Role != "" {
+		_, err = database.Exec(`UPDATE account SET role_id = (SELECT id FROM role WHERE name = $1) WHERE username = $2`, obj.Role, obj.Username)
+		if err != nil {
+			return err
+		}
+	}
+	return
+}
+
+func patchPromoteAccount(c *gin.Context) {
+	// verify privileges
+	_, role, err := confirmAccountFromGinContext(c)
+	if role != "Admin" {
+		c.JSON(http.StatusUnauthorized, gin.H{
+			"Error": fmt.Errorf("%w: only admin can modify roles", ErrUnauthorized),
+		})
+		return
+	}
+	if err != nil {
+		if errors.Is(err, ErrUnauthorized) {
+			c.JSON(http.StatusUnauthorized, gin.H{
+				"Error": err,
+			})
+		} else {
+			c.JSON(http.StatusInternalServerError, gin.H{
+				"Error": err,
+			})
+		}
+		return
+	}
+
+	// apply changes
+	var data = new(AccountPatchPromoteData)
+	if err := c.ShouldBindJSON(data); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		return
+	}
+	promoteExistingAccount(data)
 }
 
 func patchAccount(c *gin.Context) {
@@ -312,8 +355,29 @@ func confirmUserFromGinContext(c *gin.Context) (username string, err error) {
 		username, err = confirmToken(token)
 		return
 	}
-	err = errors.New("can not find suitable verification method")
+	err = fmt.Errorf("%w: can not find suitable verification method", ErrUnauthorized)
 	return
+}
+
+func confirmAccountFromGinContext(c *gin.Context) (username string, role string, err error) {
+	username, err = confirmUserFromGinContext(c)
+	if err != nil {
+		return "", "", err
+	}
+
+	query := `
+		SELECT r.name 
+		FROM account a 
+		JOIN role r ON a.role_id = r.id 
+		WHERE a.username = $1
+	`
+
+	err = database.QueryRow(query, username).Scan(&role)
+	if err != nil {
+		return username, "", fmt.Errorf("error retrieving user role: %w", err)
+	}
+
+	return username, role, nil
 }
 
 func login(c *gin.Context) {
@@ -377,5 +441,6 @@ func prepareAccount(route *gin.RouterGroup) {
 	route.POST("/register", ensureDatabaseIsOK(createAccount))
 	route.POST("/login", ensureDatabaseIsOK(login))
 	route.PATCH("/modify", ensureDatabaseIsOK(patchAccount))
+	route.PATCH("/promote", ensureDatabaseIsOK(patchPromoteAccount))
 	route.DELETE("/delete", ensureDatabaseIsOK(deleteAccount))
 }

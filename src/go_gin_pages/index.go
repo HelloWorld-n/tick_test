@@ -37,6 +37,7 @@ var ErrDatabaseOffline = errors.New("database offline")
 var ErrDoesExist = errors.New("item already exists")
 var ErrBadRequest = errors.New("bad request")
 var ErrMissingField = fmt.Errorf("%w: field missing", ErrBadRequest)
+var ErrUnauthorized = errors.New("unauthorized")
 
 func ensureDatabaseIsOK(fn func(*gin.Context)) func(c *gin.Context) {
 	return func(c *gin.Context) {
