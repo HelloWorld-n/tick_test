@@ -232,10 +232,3 @@ func TestDeleteAccount(t *testing.T) {
 	}
 
 }
-
-func TestAllAccounts(t *testing.T) {
-	TestCreateAccount(t)
-	TestPatchAccount(t)
-	TestLogin(t)
-	TestDeleteAccount(t)
-}

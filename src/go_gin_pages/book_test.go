@@ -198,10 +198,3 @@ func TestDeleteBook(t *testing.T) {
 	t.Run("DeleteNonExisting", bookDeleter("invalid_code"))
 }
 
-func TestAllBooks(t *testing.T) {
-	setupBook()
-	TestCreateBook(t)
-	TestGetBook(t)
-	TestUpdateBook(t)
-	TestDeleteBook(t)
-}

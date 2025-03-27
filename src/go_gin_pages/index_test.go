@@ -7,7 +7,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"testing"
 	"tick_test/go_gin_pages"
 )
 
@@ -38,11 +37,6 @@ func setupIndex() {
 func setup() {
 	setupAccount()
 	setupBook()
-}
-
-func TestAll(t *testing.T) {
-	TestAllAccounts(t)
-	TestAllBooks(t)
 }
 
 func fmtPrintlnRespone(resp *http.Response) {
