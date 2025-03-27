@@ -54,7 +54,7 @@ func postBook(c *gin.Context) {
 	}
 
 	if err := repository.CreateBook(&book); err != nil {
-		c.JSON(http.StatusConflict, gin.H{"Error": "code already exists"})
+		c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": "code already exists"})
 		return
 	}
 
@@ -82,11 +82,7 @@ func patchBook(c *gin.Context) {
 
 	updatedBook, err := repository.UpdateBookByCode(code, updates)
 	if err != nil {
-		if err.Error() == "no fields to update" {
-			c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
-		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
-		}
+		c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": err.Error()})
 		return
 	}
 
@@ -98,7 +94,7 @@ func deleteBook(c *gin.Context) {
 
 	rowsAffected, err := repository.RemoveBookByCode(code)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": err.Error()})
 		return
 	}
 
@@ -113,14 +109,14 @@ func RoleRequirer(handler gin.HandlerFunc, roles []string) (fn func(c *gin.Conte
 	return func(c *gin.Context) {
 		username, err := confirmUserFromGinContext(c)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"Error": err.Error()})
+			c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": err.Error()})
 			c.Abort()
 			return
 		}
 
 		userRole, err := repository.FindUserRole(username)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"Error": "failed to retrieve user role"})
+			c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": "failed to retrieve user role"})
 			c.Abort()
 			return
 		}

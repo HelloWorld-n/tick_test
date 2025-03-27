@@ -34,15 +34,7 @@ func patchPromoteAccount(c *gin.Context) {
 		return
 	}
 	if err != nil {
-		if errors.Is(err, errDefs.ErrUnauthorized) {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"Error": err,
-			})
-		} else {
-			c.JSON(http.StatusInternalServerError, gin.H{
-				"Error": err,
-			})
-		}
+		c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": err.Error()})
 		return
 	}
 
@@ -68,11 +60,7 @@ func patchAccount(c *gin.Context) {
 	}
 	err = repository.UpdateExistingAccount(username, data)
 	if err != nil {
-		status := http.StatusInternalServerError
-		if errors.Is(err, errDefs.ErrBadRequest) {
-			status = http.StatusBadRequest
-		}
-		c.JSON(status, gin.H{"Error": err.Error()})
+		c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, nil)
@@ -83,8 +71,7 @@ func deleteAccount(c *gin.Context) {
 
 	exists, err := repository.UserExists(username)
 	if err != nil {
-		status := http.StatusInternalServerError
-		c.JSON(status, gin.H{"Error": err.Error()})
+		c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": err.Error()})
 		return
 	}
 	if !exists {
@@ -94,11 +81,11 @@ func deleteAccount(c *gin.Context) {
 
 	username, err = confirmUserFromGinContext(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"Error": err.Error()})
+		c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": err.Error()})
 		return
 	}
 	if err := repository.DeleteAccount(username); err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusAccepted, nil)
@@ -165,7 +152,7 @@ func login(c *gin.Context) {
 	username := c.GetHeader("Username")
 	password := c.GetHeader("Password")
 	if err := repository.ConfirmAccount(username, password); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": err.Error()})
 		return
 	} else {
 		token := generateToken(username)
@@ -176,7 +163,7 @@ func login(c *gin.Context) {
 func getAllAccounts(c *gin.Context) {
 	accounts, err := repository.FindAllAccounts()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, accounts)

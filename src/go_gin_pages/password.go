@@ -113,11 +113,11 @@ func createSimplePasswordFromParsedData(data PasswordSimpleConfig) string {
 func createSimplePassword(c *gin.Context) {
 	var data PasswordSimpleConfig
 	if err := c.ShouldBindJSON(&data); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
 	if err := passwordValidator.Struct(data); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
 	password := createSimplePasswordFromParsedData(data)
@@ -131,13 +131,13 @@ func createSimplePassword(c *gin.Context) {
 func createSimpleStackPassword(c *gin.Context) {
 	var data PasswordSimpleStackConfig
 	if err := c.ShouldBindJSON(&data); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
 	password := ""
 	for i, item := range data {
 		if err := passwordValidator.Struct(item); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+			c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 			return
 		}
 		if item.InclusionChances == 0 || rand.Float64() < item.InclusionChances {

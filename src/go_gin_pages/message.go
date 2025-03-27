@@ -6,6 +6,7 @@ import (
 
 	"tick_test/repository"
 	"tick_test/types"
+	"tick_test/utils/errDefs"
 
 	"github.com/gin-gonic/gin"
 )
@@ -19,7 +20,7 @@ func sendMessage(c *gin.Context) {
 
 	username, err := confirmUserFromGinContext(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"Error": "user authentication failed; " + err.Error()})
+		c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": "user authentication failed; " + err.Error()})
 		return
 	}
 
@@ -27,7 +28,7 @@ func sendMessage(c *gin.Context) {
 	data.Message.When = types.ISO8601Date(time.Now().UTC().Format(time.RFC3339))
 
 	if err := repository.SaveMessage(&data.Message); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": err.Error()})
 		return
 	}
 
@@ -36,7 +37,7 @@ func sendMessage(c *gin.Context) {
 func getMessages(c *gin.Context) {
 	username, err := confirmUserFromGinContext(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"Error": "user authentication failed; " + err.Error()})
+		c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": "user authentication failed; " + err.Error()})
 		return
 	}
 
