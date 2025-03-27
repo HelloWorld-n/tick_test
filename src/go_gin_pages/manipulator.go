@@ -101,19 +101,22 @@ func loadIterationManipulatorsFromFile() error {
 
 func loadIterationManipulators() error {
 	if database != nil {
-		loadIterationManipulatorsFromDatabase()
+		if err := loadIterationManipulatorsFromDatabase(); err != nil {
+			return err
+		}
 	} else {
-		loadIterationManipulatorsFromFile()
+		if err := loadIterationManipulatorsFromFile(); err != nil {
+			return err
+		}
 	}
 	for _, iterationManipulator := range iterationManipulators {
 		dur, err := parseISO8601Duration(iterationManipulator.Data.Duration, time.Second)
-		if err == nil {
-			ticker := time.NewTicker(dur)
-			iterationManipulator.Manipulator = ticker
-			go manipulateIteration(iterationManipulator)
-		} else {
+		if err != nil {
 			return err
 		}
+		ticker := time.NewTicker(dur)
+		iterationManipulator.Manipulator = ticker
+		go manipulateIteration(iterationManipulator)
 	}
 	return nil
 }
@@ -145,6 +148,7 @@ func manipulateIteration(obj *iterationManipulator) error {
 		iterationMutex.Lock()
 		iteration += obj.Data.Value
 		if err := saveIteration(); err != nil {
+			fmt.Printf("Error saving iteration: %v\n", err)
 		}
 		iterationMutex.Unlock()
 	}
@@ -210,7 +214,8 @@ func createIterationManipulator(c *gin.Context) {
 	ensureUniqueCodeForIterationManipulator(&iterationManipulator)
 	err = saveIterationManipulatorToDatabase(&iterationManipulator)
 	if err != nil {
-		fmt.Println(err)
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		return
 	}
 	iterationManipulators = append(iterationManipulators, &iterationManipulator)
 	go manipulateIteration(&iterationManipulator)
@@ -224,6 +229,8 @@ func ensureUniqueCodeForIterationManipulator(val *iterationManipulator) {
 	for _, item := range iterationManipulators {
 		if item.Code == val.Code {
 			val.Code = random.RandSeq(80)
+			ensureUniqueCodeForIterationManipulator(val)
+			return
 		}
 	}
 }
@@ -287,13 +294,11 @@ func deleteIterationManipulator(c *gin.Context) {
 	if database == nil {
 		defer saveIterationManipulators()
 	} else {
-		if database != nil {
-			query := `DELETE FROM manipulator WHERE code = $1`
-			_, err := database.Exec(query, code)
-			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				return
-			}
+		query := `DELETE FROM manipulator WHERE code = $1`
+		_, err := database.Exec(query, code)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
 		}
 	}
 
