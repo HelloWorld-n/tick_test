@@ -8,6 +8,15 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+func UserExists(username string) (exists bool, err error) {
+	query := `SELECT EXISTS(SELECT 1 FROM account WHERE username = $1);`
+	err = database.QueryRow(query, username).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("error checking user existence: %w", err)
+	}
+	return exists, nil
+}
+
 func ConfirmAccount(username string, password string) (err error) {
 	query := `SELECT password FROM account WHERE $1 = username`
 
@@ -117,6 +126,14 @@ func SaveAccount(obj *AccountPostData) (err error) {
 	_, err = database.Exec(query, obj.Username, hashedPassword, obj.Role)
 
 	return
+}
+
+func DeleteAccount(username string) error {
+	_, err := database.Exec(`DELETE FROM account WHERE username = $1`, username)
+	if err != nil {
+		return fmt.Errorf("error deleting account: %w", err)
+	}
+	return nil
 }
 
 func UpdateExistingAccount(username string, obj *AccountPatchData) (err error) {

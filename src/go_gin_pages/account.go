@@ -112,14 +112,9 @@ func patchAccount(c *gin.Context) {
 func deleteAccount(c *gin.Context) {
 	username := c.GetHeader("Username")
 
-	var exists bool
-	checkQuery := `SELECT EXISTS(SELECT 1 FROM account WHERE username = $1);`
-	err := database.QueryRow(checkQuery, username).Scan(&exists)
+	exists, err := UserExists(username)
 	if err != nil {
 		status := http.StatusInternalServerError
-		if errors.Is(err, ErrBadRequest) {
-			status = http.StatusBadRequest
-		}
 		c.JSON(status, gin.H{"Error": err.Error()})
 		return
 	}
@@ -133,8 +128,7 @@ func deleteAccount(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"Error": err.Error()})
 		return
 	}
-	_, err = database.Exec(`DELETE FROM account WHERE username = $1`, username)
-	if err != nil {
+	if err := DeleteAccount(username); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 		return
 	}
@@ -190,14 +184,7 @@ func confirmAccountFromGinContext(c *gin.Context) (username string, role string,
 		return "", "", err
 	}
 
-	query := `
-		SELECT r.name 
-		FROM account a 
-		JOIN role r ON a.role_id = r.id 
-		WHERE a.username = $1
-	`
-
-	err = database.QueryRow(query, username).Scan(&role)
+	role, err = FindUserRole(username)
 	if err != nil {
 		return username, "", fmt.Errorf("error retrieving user role: %w", err)
 	}
