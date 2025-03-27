@@ -29,6 +29,7 @@ func DoPostgresPreparation() {
 		database = db
 	}
 
+	doPostgresPreparationForMessages()
 	doPostgresPreparationForAccount()
 	doPostgresPreparationForBook()
 	doPostgresPreparationForManipulator()
