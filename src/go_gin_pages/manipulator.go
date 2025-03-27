@@ -1,13 +1,9 @@
 package go_gin_pages
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
-	"os"
-	"path/filepath"
-	"sync"
 	"time"
 
 	"tick_test/types"
@@ -26,77 +22,6 @@ type updateIterationManipulatorData struct {
 	Duration *types.ISO8601Duration `json:"Duration"`
 	Value    *int                   `json:"Value"`
 }
-
-type iterationManipulator struct {
-	Code        string                  `json:"Code"`
-	Data        manipulateIterationData `json:"Data"`
-	Manipulator *time.Ticker            `json:"-"`
-}
-
-const iterationManipulatorFile = "../.data/IterationManipulators.json"
-
-var iterationManipulatorMutex sync.Mutex
-
-func loadIterationManipulatorsFromFile() error {
-	file, err := os.Open(iterationManipulatorFile)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil
-		}
-		return err
-	}
-	defer file.Close()
-
-	decoder := json.NewDecoder(file)
-	if err := decoder.Decode(&iterationManipulators); err != nil {
-		return err
-	}
-	return nil
-}
-
-func loadIterationManipulators() error {
-	if database != nil {
-		if err := loadIterationManipulatorsFromDatabase(); err != nil {
-			return err
-		}
-	} else {
-		if err := loadIterationManipulatorsFromFile(); err != nil {
-			return err
-		}
-	}
-	for _, iterationManipulator := range iterationManipulators {
-		dur, err := parseISO8601Duration(iterationManipulator.Data.Duration, time.Second)
-		if err != nil {
-			return err
-		}
-		ticker := time.NewTicker(dur)
-		iterationManipulator.Manipulator = ticker
-		go manipulateIteration(iterationManipulator)
-	}
-	return nil
-}
-
-func saveIterationManipulators() error {
-	iterationManipulatorMutex.Lock()
-	defer iterationManipulatorMutex.Unlock()
-	if err := os.MkdirAll(filepath.Dir(iterationManipulatorFile), 0755); err != nil {
-		return err
-	}
-
-	file, err := os.Create(iterationManipulatorFile)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	encoder := json.NewEncoder(file)
-	if err := encoder.Encode(iterationManipulators); err != nil {
-		return err
-	}
-	return nil
-}
-
-var iterationManipulators []*iterationManipulator = make([]*iterationManipulator, 0)
 
 func manipulateIteration(obj *iterationManipulator) error {
 	for range obj.Manipulator.C {
