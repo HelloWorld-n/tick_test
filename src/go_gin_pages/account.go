@@ -214,8 +214,6 @@ func getAllAccounts(c *gin.Context) {
 }
 
 func prepareAccount(route *gin.RouterGroup) {
-	doPostgresPreparationForAccount()
-
 	route.GET("/all", EnsureDatabaseIsOK(getAllAccounts))
 	route.POST("/register", EnsureDatabaseIsOK(CreateAccount))
 	route.POST("/login", EnsureDatabaseIsOK(login))

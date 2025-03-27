@@ -267,9 +267,6 @@ func deleteIterationManipulator(c *gin.Context) {
 }
 
 func prepareManipulator(route *gin.RouterGroup) {
-	doPostgresPreparationForManipulator()
-	loadIterationManipulators()
-
 	route.GET("", findAllIterationManipulators)
 	route.GET("/code/:code", findIterationManipulatorByCode)
 	route.POST("", createIterationManipulator)

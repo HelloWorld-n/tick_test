@@ -22,11 +22,17 @@ func DoPostgresPreparation() {
 	}
 	databasePath = strings.TrimSpace(databasePath)
 	db, err := sql_conn.Prepare(databasePath)
+
 	if err != nil {
 		fmt.Println(err)
 	} else {
 		database = db
 	}
+
+	doPostgresPreparationForAccount()
+	doPostgresPreparationForBook()
+	doPostgresPreparationForManipulator()
+	loadIterationManipulators()
 }
 
 func EnsureDatabaseIsOK(fn func(*gin.Context)) func(c *gin.Context) {
