@@ -7,7 +7,7 @@ import (
 	"io"
 	"net/http"
 	"testing"
-	"tick_test/go_gin_pages"
+	typeDefs "tick_test/types"
 	"tick_test/utils/random"
 
 	"gopkg.in/go-playground/assert.v1"
@@ -47,7 +47,7 @@ func accountCreator(accPos int, isSamePassword bool) (result func(t *testing.T))
 			samePassword = "VERIFICATION/" + random.RandSeq(30)
 		}
 		body, _ := json.Marshal(
-			go_gin_pages.AccountPostData{
+			typeDefs.AccountPostData{
 				Username:     accounts[accPos].Username,
 				Password:     accounts[accPos].Password,
 				SamePassword: samePassword,
@@ -88,7 +88,7 @@ func accountPatcher(accPos int, newPassword string, confirmNewPassword string) (
 		if err != nil {
 			t.Fatalf("failed to login: %v", err)
 		}
-		patchPayload := go_gin_pages.AccountPatchData{
+		patchPayload := typeDefs.AccountPatchData{
 			Password:     newPassword,
 			SamePassword: confirmNewPassword,
 		}

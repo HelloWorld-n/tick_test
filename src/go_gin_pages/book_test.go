@@ -7,7 +7,7 @@ import (
 	"io"
 	"net/http"
 	"testing"
-	"tick_test/go_gin_pages"
+	"tick_test/types"
 
 	"gopkg.in/go-playground/assert.v1"
 )
@@ -89,7 +89,7 @@ func bookFetcher(book bookData) func(*testing.T) {
 		fmtPrintlnRespone(resp)
 
 		if resp.StatusCode == http.StatusOK {
-			var newBook go_gin_pages.Book
+			var newBook types.Book
 			if err := json.NewDecoder(resp.Body).Decode(&newBook); err != nil {
 				t.Fatalf("failed to decode book: %v", err)
 			}
@@ -102,7 +102,7 @@ func bookFetcher(book bookData) func(*testing.T) {
 
 func bookUpdater(code, newTitle, newAuthor string) func(*testing.T) {
 	return func(t *testing.T) {
-		updates := go_gin_pages.Book{
+		updates := types.Book{
 			Title:  newTitle,
 			Author: newAuthor,
 		}
@@ -122,7 +122,7 @@ func bookUpdater(code, newTitle, newAuthor string) func(*testing.T) {
 		fmtPrintlnRespone(resp)
 
 		if resp.StatusCode == http.StatusOK {
-			var updatedBook go_gin_pages.Book
+			var updatedBook types.Book
 			if err := json.NewDecoder(resp.Body).Decode(&updatedBook); err != nil {
 				t.Fatalf("failed to decode updated book: %v", err)
 			}

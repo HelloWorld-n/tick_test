@@ -5,35 +5,14 @@ import (
 	"fmt"
 	"net/http"
 	"sync"
+	"tick_test/repository"
+	"tick_test/types"
+	"tick_test/utils/errDefs"
 	"tick_test/utils/random"
 	"time"
 
 	"github.com/gin-gonic/gin"
-	"golang.org/x/crypto/bcrypt"
 )
-
-type AccountPostData struct {
-	Username     string `json:"Username" binding:"gt=4"`
-	Password     string `json:"Password" binding:"gt=8"`
-	SamePassword string `json:"SamePassword"`
-	Role         string `json:"Role"`
-}
-
-type AccountPatchData struct {
-	Username     string `json:"Username"`
-	Password     string `json:"Password"`
-	SamePassword string `json:"SamePassword"`
-}
-
-type AccountPatchPromoteData struct {
-	Username string `json:"Username" binding:"required"`
-	Role     string `json:"Role" binding:"required"`
-}
-
-type AccountGetData struct {
-	Username string `json:"Username" binding:"gt=4"`
-	Role     string `json:"Role"`
-}
 
 type userTokenInfo struct {
 	Username string
@@ -45,27 +24,17 @@ var (
 	tokenStoreMutex sync.RWMutex
 )
 
-func hashPassword(password string) (string, error) {
-	hashedBytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	return string(hashedBytes), err
-}
-
-func confirmPassword(password string, hash string) (err error) {
-	err = bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
-	return
-}
-
 func patchPromoteAccount(c *gin.Context) {
 	// verify privileges
 	_, role, err := confirmAccountFromGinContext(c)
 	if role != "Admin" {
 		c.JSON(http.StatusUnauthorized, gin.H{
-			"Error": fmt.Errorf("%w: only admin can modify roles", ErrUnauthorized),
+			"Error": fmt.Errorf("%w: only admin can modify roles", errDefs.ErrUnauthorized),
 		})
 		return
 	}
 	if err != nil {
-		if errors.Is(err, ErrUnauthorized) {
+		if errors.Is(err, errDefs.ErrUnauthorized) {
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"Error": err,
 			})
@@ -78,12 +47,12 @@ func patchPromoteAccount(c *gin.Context) {
 	}
 
 	// apply changes
-	var data = new(AccountPatchPromoteData)
+	var data = new(types.AccountPatchPromoteData)
 	if err := c.ShouldBindJSON(data); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
-	PromoteExistingAccount(data)
+	repository.PromoteExistingAccount(data)
 }
 
 func patchAccount(c *gin.Context) {
@@ -92,15 +61,15 @@ func patchAccount(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"Error": err.Error()})
 		return
 	}
-	var data = new(AccountPatchData)
+	var data = new(types.AccountPatchData)
 	if err := c.ShouldBindJSON(data); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
-	err = UpdateExistingAccount(username, data)
+	err = repository.UpdateExistingAccount(username, data)
 	if err != nil {
 		status := http.StatusInternalServerError
-		if errors.Is(err, ErrBadRequest) {
+		if errors.Is(err, errDefs.ErrBadRequest) {
 			status = http.StatusBadRequest
 		}
 		c.JSON(status, gin.H{"Error": err.Error()})
@@ -112,7 +81,7 @@ func patchAccount(c *gin.Context) {
 func deleteAccount(c *gin.Context) {
 	username := c.GetHeader("Username")
 
-	exists, err := UserExists(username)
+	exists, err := repository.UserExists(username)
 	if err != nil {
 		status := http.StatusInternalServerError
 		c.JSON(status, gin.H{"Error": err.Error()})
@@ -128,7 +97,7 @@ func deleteAccount(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"Error": err.Error()})
 		return
 	}
-	if err := DeleteAccount(username); err != nil {
+	if err := repository.DeleteAccount(username); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 		return
 	}
@@ -167,14 +136,14 @@ func confirmUserFromGinContext(c *gin.Context) (username string, err error) {
 	if c.GetHeader("Password") != "" {
 		username = c.GetHeader("Username")
 		password := c.GetHeader("Password")
-		err = ConfirmAccount(username, password)
+		err = repository.ConfirmAccount(username, password)
 		return
 	}
 	if token := c.GetHeader("User-Token"); token != "" {
 		username, err = confirmToken(token)
 		return
 	}
-	err = fmt.Errorf("%w: can not find suitable verification method", ErrUnauthorized)
+	err = fmt.Errorf("%w: can not find suitable verification method", errDefs.ErrUnauthorized)
 	return
 }
 
@@ -184,7 +153,7 @@ func confirmAccountFromGinContext(c *gin.Context) (username string, role string,
 		return "", "", err
 	}
 
-	role, err = FindUserRole(username)
+	role, err = repository.FindUserRole(username)
 	if err != nil {
 		return username, "", fmt.Errorf("error retrieving user role: %w", err)
 	}
@@ -195,7 +164,7 @@ func confirmAccountFromGinContext(c *gin.Context) (username string, role string,
 func login(c *gin.Context) {
 	username := c.GetHeader("Username")
 	password := c.GetHeader("Password")
-	if err := ConfirmAccount(username, password); err != nil {
+	if err := repository.ConfirmAccount(username, password); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	} else {
@@ -205,7 +174,7 @@ func login(c *gin.Context) {
 }
 
 func getAllAccounts(c *gin.Context) {
-	accounts, err := FindAllAccounts()
+	accounts, err := repository.FindAllAccounts()
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
@@ -214,10 +183,10 @@ func getAllAccounts(c *gin.Context) {
 }
 
 func prepareAccount(route *gin.RouterGroup) {
-	route.GET("/all", EnsureDatabaseIsOK(getAllAccounts))
-	route.POST("/register", EnsureDatabaseIsOK(CreateAccount))
-	route.POST("/login", EnsureDatabaseIsOK(login))
-	route.PATCH("/modify", EnsureDatabaseIsOK(patchAccount))
-	route.PATCH("/promote", EnsureDatabaseIsOK(patchPromoteAccount))
-	route.DELETE("/delete", EnsureDatabaseIsOK(deleteAccount))
+	route.GET("/all", repository.EnsureDatabaseIsOK(getAllAccounts))
+	route.POST("/register", repository.EnsureDatabaseIsOK(repository.CreateAccount))
+	route.POST("/login", repository.EnsureDatabaseIsOK(login))
+	route.PATCH("/modify", repository.EnsureDatabaseIsOK(patchAccount))
+	route.PATCH("/promote", repository.EnsureDatabaseIsOK(patchPromoteAccount))
+	route.DELETE("/delete", repository.EnsureDatabaseIsOK(deleteAccount))
 }

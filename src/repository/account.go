@@ -1,12 +1,26 @@
-package go_gin_pages
+package repository
 
 import (
 	"errors"
 	"fmt"
 	"net/http"
 
+	"tick_test/types"
+	errDefs "tick_test/utils/errDefs"
+
 	"github.com/gin-gonic/gin"
+	"golang.org/x/crypto/bcrypt"
 )
+
+func hashPassword(password string) (string, error) {
+	hashedBytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
+	return string(hashedBytes), err
+}
+
+func confirmPassword(password string, hash string) (err error) {
+	err = bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+	return
+}
 
 func UserExists(username string) (exists bool, err error) {
 	query := `SELECT EXISTS(SELECT 1 FROM account WHERE username = $1);`
@@ -43,7 +57,7 @@ func ConfirmAccount(username string, password string) (err error) {
 }
 
 func CreateAccount(c *gin.Context) {
-	var data AccountPostData
+	var data types.AccountPostData
 	if err := c.ShouldBindJSON(&data); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{`Error`: err.Error()})
 		return
@@ -53,7 +67,7 @@ func CreateAccount(c *gin.Context) {
 	}
 	if err := SaveAccount(&data); err != nil {
 		status := http.StatusBadRequest
-		if errors.Is(err, ErrDoesExist) {
+		if errors.Is(err, errDefs.ErrDoesExist) {
 			status = http.StatusConflict
 		}
 		c.JSON(status, gin.H{`Error`: err.Error()})
@@ -66,7 +80,7 @@ func CreateAccount(c *gin.Context) {
 	)
 }
 
-func FindAllAccounts() (data []AccountGetData, err error) {
+func FindAllAccounts() (data []types.AccountGetData, err error) {
 	query := `
 		SELECT 
 			username, 
@@ -80,9 +94,9 @@ func FindAllAccounts() (data []AccountGetData, err error) {
 	}
 	defer rows.Close()
 
-	data = make([]AccountGetData, 0)
+	data = make([]types.AccountGetData, 0)
 	for rows.Next() {
-		var account AccountGetData
+		var account types.AccountGetData
 		if err := rows.Scan(&account.Username, &account.Role); err != nil {
 			return nil, err
 		}
@@ -96,9 +110,9 @@ func FindAllAccounts() (data []AccountGetData, err error) {
 	return data, nil
 }
 
-func SaveAccount(obj *AccountPostData) (err error) {
+func SaveAccount(obj *types.AccountPostData) (err error) {
 	if obj.Password != obj.SamePassword {
-		return fmt.Errorf("%w: field `Password` differs from field `SamePassword`", ErrBadRequest)
+		return fmt.Errorf("%w: field `Password` differs from field `SamePassword`", errDefs.ErrBadRequest)
 	}
 
 	var exists bool
@@ -108,7 +122,7 @@ func SaveAccount(obj *AccountPostData) (err error) {
 		return fmt.Errorf("error checking user existence: %w", err)
 	}
 	if exists {
-		return fmt.Errorf("%w; user with username %s", ErrDoesExist, obj.Username)
+		return fmt.Errorf("%w; user with username %s", errDefs.ErrDoesExist, obj.Username)
 	}
 
 	query := `
@@ -136,7 +150,7 @@ func DeleteAccount(username string) error {
 	return nil
 }
 
-func UpdateExistingAccount(username string, obj *AccountPatchData) (err error) {
+func UpdateExistingAccount(username string, obj *types.AccountPatchData) (err error) {
 	// verify valid input
 	var count int
 	err = database.QueryRow(`SELECT COUNT(*) FROM account WHERE username = $1`, username).Scan(&count)
@@ -147,10 +161,10 @@ func UpdateExistingAccount(username string, obj *AccountPatchData) (err error) {
 		return errors.New("no account found with the specified username")
 	}
 	if obj.Password != obj.SamePassword {
-		return fmt.Errorf("%w: field `Password` differs from field `SamePassword`", ErrBadRequest)
+		return fmt.Errorf("%w: field `Password` differs from field `SamePassword`", errDefs.ErrBadRequest)
 	}
 	if obj.Password != "" && len(obj.Password) < 8 {
-		return fmt.Errorf("%w: field `Password` is too short; excepted lenght at least 8", ErrBadRequest)
+		return fmt.Errorf("%w: field `Password` is too short; excepted lenght at least 8", errDefs.ErrBadRequest)
 	}
 
 	// apply changes
@@ -173,7 +187,7 @@ func UpdateExistingAccount(username string, obj *AccountPatchData) (err error) {
 	return
 }
 
-func PromoteExistingAccount(obj *AccountPatchPromoteData) (err error) {
+func PromoteExistingAccount(obj *types.AccountPatchPromoteData) (err error) {
 	// verify valid input
 	var count int
 	err = database.QueryRow(`SELECT COUNT(*) FROM account WHERE username = $1`, obj.Username).Scan(&count)
@@ -204,43 +218,6 @@ func FindUserRole(username string) (string, error) {
 		return "", err
 	}
 	return role, nil
-}
-
-func RoleRequirer(handler gin.HandlerFunc, roles []string) (fn func(c *gin.Context)) {
-	return func(c *gin.Context) {
-		username, err := confirmUserFromGinContext(c)
-		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"Error": err.Error()})
-			c.Abort()
-			return
-		}
-
-		userRole, err := FindUserRole(username)
-		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"Error": "failed to retrieve user role"})
-			c.Abort()
-			return
-		}
-
-		ok := false
-		for _, role := range roles {
-			if role == userRole {
-				ok = true
-				break
-			}
-		}
-
-		if !ok {
-			c.JSON(http.StatusForbidden, gin.H{
-				"Error":      "user does not have the required role",
-				"ValidRoles": roles,
-			})
-			c.Abort()
-			return
-		}
-
-		handler(c)
-	}
 }
 
 func doPostgresPreparationForAccount() {

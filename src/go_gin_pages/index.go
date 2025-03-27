@@ -1,60 +1,21 @@
 package go_gin_pages
 
 import (
-	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
-	"path/filepath"
-	"sync"
 	"time"
 
-	"tick_test/types"
+	"tick_test/repository"
 
 	"github.com/gin-gonic/gin"
 )
 
-type resultIndex struct {
-	Iteration int               `json:"Iteration"`
-	Now       types.ISO8601Date `json:"Now"`
-}
-
-var iteration int
-
-const iterationFile = "../.data/Iteration.json"
-const dbPathFile = "../.config/dbPath.txt"
 const urlFile = "../.congih/url.txt"
 
-var iterationMutex sync.Mutex
-
-var ErrDatabaseOffline = errors.New("database offline")
-var ErrDoesExist = errors.New("item already exists")
-var ErrBadRequest = errors.New("bad request")
-var ErrMissingField = fmt.Errorf("%w: field missing", ErrBadRequest)
-var ErrUnauthorized = errors.New("unauthorized")
-
-func saveIteration() error {
-	if err := os.MkdirAll(filepath.Dir(iterationFile), 0755); err != nil {
-		return err
-	}
-
-	file, err := os.Create(iterationFile)
-	if err != nil {
-		return err
-	}
-	defer file.Close()
-
-	encoder := json.NewEncoder(file)
-	if err := encoder.Encode(iteration); err != nil {
-		return err
-	}
-	return nil
-}
-
 func index(c *gin.Context) {
-	if err := loadIteration(); err != nil {
+	if err := repository.LoadIteration(); err != nil {
 		c.JSON(
 			http.StatusInternalServerError,
 			gin.H{
@@ -66,9 +27,9 @@ func index(c *gin.Context) {
 
 	c.JSON(
 		http.StatusOK,
-		resultIndex{
+		repository.ResultIndex{
 			Now:       time.Now().UTC().Format(time.RFC3339),
-			Iteration: iteration,
+			Iteration: repository.Iteration,
 		},
 	)
 }
@@ -129,8 +90,7 @@ func Prepare(engine *gin.Engine, url string) {
 		c.Next()
 	})
 
-	DoPostgresPreparation()
-	loadIteration()
+	repository.DoPostgresPreparation()
 	engine.GET("/", index)
 	prepareManipulator(engine.Group("/manipulator"))
 	prepareSort(engine.Group("/sort"))

@@ -1,16 +1,23 @@
-package go_gin_pages
+package repository
 
-import "fmt"
+import (
+	"fmt"
+	"tick_test/types"
+	"tick_test/utils/errDefs"
+)
 
-func SaveMessage(msg *Message) error {
+func SaveMessage(msg *types.Message) error {
+	if database == nil {
+		return errDefs.ErrDatabaseOffline
+	}
 	query := `INSERT INTO messages (from_user, to_user, content, created_at) VALUES ($1, $2, $3, $4)`
 	_, err := database.Exec(query, msg.From, msg.To, msg.Content, msg.When)
 	return err
 }
 
-func FindMessages(username string, sent bool, recv bool) (msgs []Message, err error) {
+func FindMessages(username string, sent bool, recv bool) (msgs []types.Message, err error) {
 	if database == nil {
-		return nil, fmt.Errorf("database offline")
+		return nil, errDefs.ErrDatabaseOffline
 	}
 
 	var query string
@@ -22,7 +29,7 @@ func FindMessages(username string, sent bool, recv bool) (msgs []Message, err er
 	case recv:
 		query = `SELECT from_user, to_user, content, created_at FROM messages WHERE to_user = $1`
 	default:
-		return []Message{}, nil
+		return []types.Message{}, nil
 	}
 
 	rows, err := database.Query(query, username)
@@ -31,9 +38,9 @@ func FindMessages(username string, sent bool, recv bool) (msgs []Message, err er
 	}
 	defer rows.Close()
 
-	msgs = make([]Message, 0)
+	msgs = make([]types.Message, 0)
 	for rows.Next() {
-		var msg Message
+		var msg types.Message
 		if err := rows.Scan(&msg.From, &msg.To, &msg.Content, &msg.When); err != nil {
 			return nil, err
 		}
@@ -41,7 +48,6 @@ func FindMessages(username string, sent bool, recv bool) (msgs []Message, err er
 	}
 	return msgs, nil
 }
-
 
 func doPostgresPreparationForMessages() {
 	if database != nil {

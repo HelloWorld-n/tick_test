@@ -208,7 +208,7 @@ func fetchSortedMeta(meta *[]intensiveCalculationMeta, sortType string, wg *sync
 	sortMutex.Lock()
 	for _, val := range intensiveCalculationResults {
 		if val.SortType == sortType {
-			timeTaken, err := parseISO8601Duration(val.TimeTaken, 0*time.Nanosecond)
+			timeTaken, err := types.ParseISO8601Duration(val.TimeTaken, 0*time.Nanosecond)
 			if err != nil {
 				break
 			}

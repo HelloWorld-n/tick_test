@@ -4,28 +4,14 @@ import (
 	"net/http"
 	"time"
 
+	"tick_test/repository"
 	"tick_test/types"
 
 	"github.com/gin-gonic/gin"
 )
 
-type Message struct {
-	From    string            `json:"From"`
-	To      string            `json:"To"`
-	When    types.ISO8601Date `json:"When"`
-	Content string            `json:"Content"`
-}
-
-type MessageToSend struct {
-	Message Message `json:"Message"`
-}
-
 func sendMessage(c *gin.Context) {
-	if database == nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"Error": "database offline"})
-		return
-	}
-	var data MessageToSend
+	var data types.MessageToSend
 	if err := c.ShouldBindJSON(&data); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
@@ -40,7 +26,7 @@ func sendMessage(c *gin.Context) {
 	data.Message.From = username
 	data.Message.When = types.ISO8601Date(time.Now().UTC().Format(time.RFC3339))
 
-	if err := SaveMessage(&data.Message); err != nil {
+	if err := repository.SaveMessage(&data.Message); err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
@@ -54,7 +40,7 @@ func getMessages(c *gin.Context) {
 		return
 	}
 
-	msgs, err := FindMessages(username, true, true)
+	msgs, err := repository.FindMessages(username, true, true)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 		return
@@ -70,7 +56,7 @@ func getSentMessages(c *gin.Context) {
 		return
 	}
 
-	msgs, err := FindMessages(username, true, false)
+	msgs, err := repository.FindMessages(username, true, false)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 		return
@@ -86,7 +72,7 @@ func getReceivedMessages(c *gin.Context) {
 		return
 	}
 
-	msgs, err := FindMessages(username, false, true)
+	msgs, err := repository.FindMessages(username, false, true)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 		return
@@ -96,8 +82,8 @@ func getReceivedMessages(c *gin.Context) {
 }
 
 func prepareMessage(route *gin.RouterGroup) {
-	route.POST("/send", EnsureDatabaseIsOK(sendMessage))
-	route.GET("/user", EnsureDatabaseIsOK(getMessages))
-	route.GET("/sent-by", EnsureDatabaseIsOK(getSentMessages))
-	route.GET("/recv-by", EnsureDatabaseIsOK(getReceivedMessages))
+	route.POST("/send", repository.EnsureDatabaseIsOK(sendMessage))
+	route.GET("/user", repository.EnsureDatabaseIsOK(getMessages))
+	route.GET("/sent-by", repository.EnsureDatabaseIsOK(getSentMessages))
+	route.GET("/recv-by", repository.EnsureDatabaseIsOK(getReceivedMessages))
 }

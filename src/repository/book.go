@@ -1,10 +1,16 @@
-package go_gin_pages
+package repository
 
 import (
 	"fmt"
+	"tick_test/types"
+	errDefs "tick_test/utils/errDefs"
 )
 
-func FindAllBooks() ([]Book, error) {
+func FindAllBooks() (books []types.Book, err error) {
+	if database == nil {
+		err = errDefs.ErrDatabaseOffline
+		return
+	}
 	query := `SELECT code, title, author FROM book`
 	rows, err := database.Query(query)
 	if err != nil {
@@ -12,9 +18,9 @@ func FindAllBooks() ([]Book, error) {
 	}
 	defer rows.Close()
 
-	books := make([]Book, 0)
+	books = make([]types.Book, 0)
 	for rows.Next() {
-		var book Book
+		var book types.Book
 		if err := rows.Scan(&book.Code, &book.Title, &book.Author); err != nil {
 			return nil, err
 		}
@@ -23,28 +29,39 @@ func FindAllBooks() ([]Book, error) {
 	return books, nil
 }
 
-func FindBookByCode(code string) (Book, error) {
-	var book Book
-	err := database.QueryRow(
+func FindBookByCode(code string) (book types.Book, err error) {
+	if database == nil {
+		err = errDefs.ErrDatabaseOffline
+		return
+	}
+	err = database.QueryRow(
 		`SELECT code, title, author FROM book WHERE code = $1`,
 		code,
 	).Scan(&book.Code, &book.Title, &book.Author)
 
 	if err != nil {
-		return Book{}, err
+		return types.Book{}, err
 	}
 	return book, nil
 }
 
-func CreateBook(book *Book) error {
-	_, err := database.Exec(
+func CreateBook(book *types.Book) (err error) {
+	if database == nil {
+		err = errDefs.ErrDatabaseOffline
+		return
+	}
+	_, err = database.Exec(
 		`INSERT INTO book (code, title, author) VALUES ($1, $2, $3)`,
 		book.Code, book.Title, book.Author,
 	)
 	return err
 }
 
-func UpdateBookByCode(code string, updates Book) (Book, error) {
+func UpdateBookByCode(code string, updates types.Book) (book types.Book, err error) {
+	if database == nil {
+		err = errDefs.ErrDatabaseOffline
+		return
+	}
 	var queryFields string
 	params := []interface{}{}
 	paramCount := 1
@@ -61,30 +78,34 @@ func UpdateBookByCode(code string, updates Book) (Book, error) {
 	}
 
 	if len(params) == 0 {
-		return Book{}, fmt.Errorf("%w: no fields to update", ErrBadRequest)
+		return types.Book{}, fmt.Errorf("%w: no fields to update", errDefs.ErrBadRequest)
 	}
 
 	query := fmt.Sprintf("UPDATE book SET %s WHERE code = $%d", queryFields[:len(queryFields)-2], paramCount)
 	params = append(params, code)
 
-	_, err := database.Exec(query, params...)
+	_, err = database.Exec(query, params...)
 	if err != nil {
-		return Book{}, err
+		return types.Book{}, err
 	}
 
-	var updatedBook Book
+	var updatedBook types.Book
 	err = database.QueryRow(
 		`SELECT code, title, author FROM book WHERE code = $1`,
 		code,
 	).Scan(&updatedBook.Code, &updatedBook.Title, &updatedBook.Author)
 	if err != nil {
-		return Book{}, err
+		return types.Book{}, err
 	}
 
 	return updatedBook, nil
 }
 
-func RemoveBookByCode(code string) (int64, error) {
+func RemoveBookByCode(code string) (n int64, err error) {
+	if database == nil {
+		err = errDefs.ErrDatabaseOffline
+		return
+	}
 	result, err := database.Exec(`DELETE FROM book WHERE code = $1`, code)
 	if err != nil {
 		return 0, err
