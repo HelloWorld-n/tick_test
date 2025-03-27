@@ -61,7 +61,7 @@ func UpdateBookByCode(code string, updates Book) (Book, error) {
 	}
 
 	if len(params) == 0 {
-		return Book{}, fmt.Errorf("no fields to update")
+		return Book{}, fmt.Errorf("%w: no fields to update", ErrBadRequest)
 	}
 
 	query := fmt.Sprintf("UPDATE book SET %s WHERE code = $%d", queryFields[:len(queryFields)-2], paramCount)
@@ -95,8 +95,6 @@ func RemoveBookByCode(code string) (int64, error) {
 	}
 	return rowsAffected, nil
 }
-
-
 
 func doPostgresPreparationForBook() {
 	if database != nil {

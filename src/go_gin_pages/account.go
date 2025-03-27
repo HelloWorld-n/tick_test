@@ -229,10 +229,10 @@ func getAllAccounts(c *gin.Context) {
 func prepareAccount(route *gin.RouterGroup) {
 	doPostgresPreparationForAccount()
 
-	route.GET("/all", ensureDatabaseIsOK(getAllAccounts))
-	route.POST("/register", ensureDatabaseIsOK(CreateAccount))
-	route.POST("/login", ensureDatabaseIsOK(login))
-	route.PATCH("/modify", ensureDatabaseIsOK(patchAccount))
-	route.PATCH("/promote", ensureDatabaseIsOK(patchPromoteAccount))
-	route.DELETE("/delete", ensureDatabaseIsOK(deleteAccount))
+	route.GET("/all", EnsureDatabaseIsOK(getAllAccounts))
+	route.POST("/register", EnsureDatabaseIsOK(CreateAccount))
+	route.POST("/login", EnsureDatabaseIsOK(login))
+	route.PATCH("/modify", EnsureDatabaseIsOK(patchAccount))
+	route.PATCH("/promote", EnsureDatabaseIsOK(patchPromoteAccount))
+	route.DELETE("/delete", EnsureDatabaseIsOK(deleteAccount))
 }

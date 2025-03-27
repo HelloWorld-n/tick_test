@@ -119,9 +119,9 @@ func requireBookKeeperRole(handler gin.HandlerFunc) gin.HandlerFunc {
 func prepareBook(route *gin.RouterGroup) {
 	doPostgresPreparationForBook()
 
-	route.GET("/all", ensureDatabaseIsOK(getAllBooks))
-	route.GET("/code/:code", ensureDatabaseIsOK(getBook))
-	route.POST("/create", ensureDatabaseIsOK(requireBookKeeperRole(postBook)))
-	route.PATCH("/code/:code", ensureDatabaseIsOK(requireBookKeeperRole(patchBook)))
-	route.DELETE("/code/:code", ensureDatabaseIsOK(requireBookKeeperRole(deleteBook)))
+	route.GET("/all", EnsureDatabaseIsOK(getAllBooks))
+	route.GET("/code/:code", EnsureDatabaseIsOK(getBook))
+	route.POST("/create", EnsureDatabaseIsOK(requireBookKeeperRole(postBook)))
+	route.PATCH("/code/:code", EnsureDatabaseIsOK(requireBookKeeperRole(patchBook)))
+	route.DELETE("/code/:code", EnsureDatabaseIsOK(requireBookKeeperRole(deleteBook)))
 }

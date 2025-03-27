@@ -1,7 +1,6 @@
 package go_gin_pages
 
 import (
-	"database/sql"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,11 +8,9 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"strings"
 	"sync"
 	"time"
 
-	"tick_test/sql_conn"
 	"tick_test/types"
 
 	"github.com/gin-gonic/gin"
@@ -25,7 +22,6 @@ type resultIndex struct {
 }
 
 var iteration int
-var database *sql.DB
 
 const iterationFile = "../.data/Iteration.json"
 const dbPathFile = "../.config/dbPath.txt"
@@ -38,56 +34,6 @@ var ErrDoesExist = errors.New("item already exists")
 var ErrBadRequest = errors.New("bad request")
 var ErrMissingField = fmt.Errorf("%w: field missing", ErrBadRequest)
 var ErrUnauthorized = errors.New("unauthorized")
-
-func ensureDatabaseIsOK(fn func(*gin.Context)) func(c *gin.Context) {
-	return func(c *gin.Context) {
-		if database == nil {
-			c.JSON(
-				http.StatusInternalServerError,
-				gin.H{
-					`Error`: ErrDatabaseOffline,
-				},
-			)
-			return
-		}
-		fn(c)
-	}
-}
-
-func loadDatabasePath() (url string, err error) {
-	url = ""
-	file, err := os.Open(dbPathFile)
-	if err != nil {
-		return
-	}
-	defer file.Close()
-
-	b, err := io.ReadAll(file)
-	url = string(b)
-
-	return
-}
-
-func loadIteration() error {
-	iterationMutex.Lock()
-	defer iterationMutex.Unlock()
-
-	file, err := os.Open(iterationFile)
-	if err != nil {
-		if os.IsNotExist(err) {
-			iteration = 0
-			return nil
-		}
-		return err
-	}
-	defer file.Close()
-
-	decoder := json.NewDecoder(file)
-	if err := decoder.Decode(&iteration); err != nil {
-		return err
-	}
-	return nil
-}
 
 func saveIteration() error {
 	if err := os.MkdirAll(filepath.Dir(iterationFile), 0755); err != nil {
@@ -125,20 +71,6 @@ func index(c *gin.Context) {
 			Iteration: iteration,
 		},
 	)
-}
-
-func doPostgresPreparation() {
-	databasePath, err := loadDatabasePath()
-	if err != nil {
-		return
-	}
-	databasePath = strings.TrimSpace(databasePath)
-	db, err := sql_conn.Prepare(databasePath)
-	if err != nil {
-		fmt.Println(err)
-	} else {
-		database = db
-	}
 }
 
 type corsMiddleware struct {
@@ -197,7 +129,7 @@ func Prepare(engine *gin.Engine, url string) {
 		c.Next()
 	})
 
-	doPostgresPreparation()
+	DoPostgresPreparation()
 	loadIteration()
 	engine.GET("/", index)
 	prepareManipulator(engine.Group("/manipulator"))
