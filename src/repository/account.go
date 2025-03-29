@@ -3,12 +3,10 @@ package repository
 import (
 	"errors"
 	"fmt"
-	"net/http"
 
 	"tick_test/types"
 	errDefs "tick_test/utils/errDefs"
 
-	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -54,30 +52,6 @@ func ConfirmAccount(username string, password string) (err error) {
 	}
 	err = errors.New("unable to find user with given username")
 	return
-}
-
-func CreateAccount(c *gin.Context) {
-	var data types.AccountPostData
-	if err := c.ShouldBindJSON(&data); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{`Error`: err.Error()})
-		return
-	}
-	if data.Role == "" {
-		data.Role = "User"
-	}
-	if err := SaveAccount(&data); err != nil {
-		status := http.StatusBadRequest
-		if errors.Is(err, errDefs.ErrDoesExist) {
-			status = http.StatusConflict
-		}
-		c.JSON(status, gin.H{`Error`: err.Error()})
-		return
-	}
-
-	c.JSON(
-		http.StatusCreated,
-		data,
-	)
 }
 
 func FindAllAccounts() (data []types.AccountGetData, err error) {

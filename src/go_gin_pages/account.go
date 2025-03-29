@@ -169,9 +169,33 @@ func getAllAccounts(c *gin.Context) {
 	c.JSON(http.StatusOK, accounts)
 }
 
+func postAccount(c *gin.Context) {
+	var data types.AccountPostData
+	if err := c.ShouldBindJSON(&data); err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{`Error`: err.Error()})
+		return
+	}
+	if data.Role == "" {
+		data.Role = "User"
+	}
+	if err := repository.SaveAccount(&data); err != nil {
+		status := http.StatusBadRequest
+		if errors.Is(err, errDefs.ErrDoesExist) {
+			status = http.StatusConflict
+		}
+		c.JSON(status, gin.H{`Error`: err.Error()})
+		return
+	}
+
+	c.JSON(
+		http.StatusCreated,
+		data,
+	)
+}
+
 func prepareAccount(route *gin.RouterGroup) {
 	route.GET("/all", repository.EnsureDatabaseIsOK(getAllAccounts))
-	route.POST("/register", repository.EnsureDatabaseIsOK(repository.CreateAccount))
+	route.POST("/register", repository.EnsureDatabaseIsOK(postAccount))
 	route.POST("/login", repository.EnsureDatabaseIsOK(login))
 	route.PATCH("/modify", repository.EnsureDatabaseIsOK(patchAccount))
 	route.PATCH("/promote", repository.EnsureDatabaseIsOK(patchPromoteAccount))
