@@ -84,6 +84,23 @@ func FindAllAccounts() (data []types.AccountGetData, err error) {
 	return data, nil
 }
 
+func ConfirmNoAdmins() (adminCount int, err error) {
+	adminQuery := `
+		SELECT COUNT(*) 
+		FROM account a
+		JOIN role r ON a.role_id = r.id
+		WHERE r.name = 'Admin'
+	`
+	err = database.QueryRow(adminQuery).Scan(&adminCount)
+	if err != nil {
+		err = fmt.Errorf("%w; error checking existing admin accounts: %w", err, errDefs.ErrInternalServerError)
+	}
+	if adminCount > 0 {
+		err = fmt.Errorf("%w: an admin already exists", errDefs.ErrBadRequest)
+	}
+	return
+}
+
 func SaveAccount(obj *types.AccountPostData) (err error) {
 	if obj.Password != obj.SamePassword {
 		return fmt.Errorf("%w: field `Password` differs from field `SamePassword`", errDefs.ErrBadRequest)
@@ -97,6 +114,12 @@ func SaveAccount(obj *types.AccountPostData) (err error) {
 	}
 	if exists {
 		return fmt.Errorf("%w; user with username %s", errDefs.ErrDoesExist, obj.Username)
+	}
+	if obj.Role == "Admin" {
+		_, err = ConfirmNoAdmins()
+		if err != nil {
+			return
+		}
 	}
 
 	query := `
