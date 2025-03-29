@@ -2,7 +2,10 @@
 
 Hosted at 127.0.0.1:4041 .
 
-This document provides examples of requests and responses for the available API endpoints.
+Account and Book endpoints require postgres installed and running.  
+Put path to postgres at `./.config/dbPath.txt`.  
+
+This document provides examples of requests and responses for the available API endpoints.  
 
 
 ---
@@ -13,7 +16,7 @@ This document provides examples of requests and responses for the available API 
 
 ### GET `/`
 
-Example Response:
+Example Response:  
 ```json
 {
   "Iteration": 0,
@@ -187,6 +190,7 @@ Example Response:
 ---
 
 ### GET `/password/rate/`*password*
+
 Example Response:
 ```json
 {
@@ -199,7 +203,8 @@ Example Response:
 ---
 
 ### POST `/password/simple`
-Example Request
+
+Example Request:
 ```json
 {
   "Size": 10,
@@ -210,7 +215,10 @@ Example Response:
 ```json
 "CABEABCEAA"
 ```
-Example Request
+
+---
+
+Example Request:
 ```json
 {
   "MinSize": 5,
@@ -255,6 +263,7 @@ Example Request:
 ---
 
 ### GET `/sort`
+
 Example Response:
 ```json
 [
@@ -273,6 +282,8 @@ Example Response:
 ---
 
 ### GET `/sort/meta`
+
+Example Response:
 ```json
 [
   {
@@ -290,7 +301,7 @@ Example Response:
 
 ### GET `/sort/code/`*code*
 
-Example Response
+Example Response:
 ```json
 {
   "Code": "RandomCode",
@@ -382,7 +393,7 @@ Request Body:
 ---
 
 ### GET `/manipulator`
-Example Response
+Example Response:
 ```json
 [
   {
