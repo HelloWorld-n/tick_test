@@ -24,6 +24,155 @@ Example Response:
 
 ---
 
+## Account Endpoints
+
+---
+
+### POST `/account/register`
+
+Example Request:
+```json
+{
+  "Username": "exampleUser",
+  "Password": "SecurePassword",
+  "SamePassword": "SecurePassword",
+  "Role": "User"
+}
+```
+> Creates a new account. If the "Role" field is omitted, it defaults to "User".
+> Returns the created account data on success or an error if the username already exists.
+
+---
+
+### GET `/account/all`
+
+Example Response:
+```json
+[
+  {
+    "Username": "ExampleUser",
+    "Role": "User"
+  },
+  {
+    "Username": "Librarian",
+    "Role": "BookKeeper"
+  }
+]
+```
+> Retrieves a list of all user accounts.
+
+---
+
+### DELETE `/account/delete`
+
+> Deletes the account identified by the specified username.
+
+---
+
+### PATCH `/account/modify`
+
+Example Request:
+```json
+{
+  "Username": "newUsername",
+  "Password": "new SecurePassword()",
+  "SamePassword": "new SecurePassword()"
+}
+```
+> Updates an existing account.
+> Fields provided in the request will be updated (e.g. changing the username or password).
+> Ensures that the new password meets the requirements and that "Password" and "SamePassword" match.
+
+---
+
+### PATCH `/account/promote`
+
+Example Request:
+```json
+{
+  "Username": "user1",
+  "Role": "Admin"
+}
+```
+> Promotes an account by updating its role.
+> The endpoint verifies that the account exists before applying the new role.
+> Requires user with role `Admin`
+
+---
+
+## Book Endpoints
+
+---
+
+### GET `/book/all`
+
+Example Response:
+```json
+[
+  {
+    "Code": "GeneratedCode",
+    "Title": "The Go Programming Language",
+    "Author": "Alan Donovan"
+  },
+  {
+    "Code": "DifferentCode",
+    "Title": "Introducing Go",
+    "Author": "Caleb Doxsey"
+  }
+]
+```
+
+> Retrieves a list of all books.
+
+---
+
+### GET `/book/code/`*code*
+
+Example Response:
+```json
+{
+  "Code": "GeneratedCode",
+  "Title": "The Go Programming Language",
+  "Author": "Alan Donovan"
+}
+```
+
+>  Retrieves a specific book by its unique code.
+
+---
+
+### POST `/book`
+
+Example Request:
+```json
+{
+  "Title": "Learning Go",
+  "Author": "Jon Bodner"
+}
+```
+
+> Creates a new book entry.
+
+---
+
+### PATCH `/book/`*code*
+
+Example Request:
+```json
+{
+  "Title": "Learning Go: Updated Edition",
+  "Author": "Jon Bodner"
+}
+```
+
+> Updates the title and/or author of the specified book. Only the provided fields will be updated.
+
+---
+
+### DELETE `/book/`*code*
+
+> Deletes the book with the specified code.
+
 ## Password Endpoints
 
 ---
