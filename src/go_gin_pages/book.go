@@ -26,7 +26,7 @@ func getBook(c *gin.Context) {
 	book, err := repository.FindBookByCode(code)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			c.JSON(http.StatusNotFound, gin.H{"Error": "book not found"})
+			c.JSON(http.StatusConflict, gin.H{"Error": "book not found"})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
@@ -67,7 +67,7 @@ func patchBook(c *gin.Context) {
 	_, err := repository.FindBookByCode(code)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			c.JSON(http.StatusNotFound, gin.H{"Error": "book not found"})
+			c.JSON(http.StatusConflict, gin.H{"Error": "book not found"})
 			return
 		}
 		c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})

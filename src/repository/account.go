@@ -158,7 +158,7 @@ func UpdateExistingAccount(username string, obj *types.AccountPatchData) (err er
 		return err
 	}
 	if count == 0 {
-		return errors.New("no account found with the specified username")
+		return fmt.Errorf("%w: no account found with the specified username", errDefs.ErrConflict)
 	}
 	if obj.Password != obj.SamePassword {
 		return fmt.Errorf("%w: field `Password` differs from field `SamePassword`", errDefs.ErrBadRequest)
@@ -193,6 +193,9 @@ func PromoteExistingAccount(obj *types.AccountPatchPromoteData) (err error) {
 	err = database.QueryRow(`SELECT COUNT(*) FROM account WHERE username = $1`, obj.Username).Scan(&count)
 	if err != nil {
 		return err
+	}
+	if count == 0 {
+		return fmt.Errorf("%w: no account found with the specified username", errDefs.ErrConflict)
 	}
 
 	// apply changes
