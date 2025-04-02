@@ -3,12 +3,23 @@ package repository
 import (
 	"errors"
 	"fmt"
+	"strings"
 
 	"tick_test/types"
 	errDefs "tick_test/utils/errDefs"
 
 	"golang.org/x/crypto/bcrypt"
 )
+
+func validateCredential(cred string, credName string) (err error) {
+	if strings.ContainsAny(cred, "\r\n\x00") {
+		return fmt.Errorf("%w: credential %v contains invalid newline characters", errDefs.ErrBadRequest, credName)
+	}
+	if cred != strings.Trim(cred, " \t\u00A0\u2000\u2001\u2002\u2003\u2004\u2005\u2006\u2007") {
+		return fmt.Errorf("%w: credential %v must not start or end with a space or tab", errDefs.ErrBadRequest, credName)
+	}
+	return
+}
 
 func hashPassword(password string) (string, error) {
 	hashedBytes, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
@@ -102,6 +113,12 @@ func ConfirmNoAdmins() (adminCount int, err error) {
 }
 
 func SaveAccount(obj *types.AccountPostData) (err error) {
+	if err = validateCredential(obj.Username, "Username"); err != nil {
+		return
+	}
+	if err = validateCredential(obj.Password, "Password"); err != nil {
+		return
+	}
 	if obj.Password != obj.SamePassword {
 		return fmt.Errorf("%w: field `Password` differs from field `SamePassword`", errDefs.ErrBadRequest)
 	}
@@ -149,6 +166,12 @@ func DeleteAccount(username string) error {
 
 func UpdateExistingAccount(username string, obj *types.AccountPatchData) (err error) {
 	// verify valid input
+	if err = validateCredential(obj.Username, "Username"); err != nil {
+		return
+	}
+	if err = validateCredential(obj.Password, "Password"); err != nil {
+		return
+	}
 	var count int
 	err = database.QueryRow(`SELECT COUNT(*) FROM account WHERE username = $1`, username).Scan(&count)
 	if err != nil {
