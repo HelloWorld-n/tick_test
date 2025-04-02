@@ -1,4 +1,4 @@
-package go_gin_pages_test
+package go_gin_pages
 
 import (
 	"bytes"

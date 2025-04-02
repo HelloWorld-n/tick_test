@@ -1,4 +1,4 @@
-package go_gin_pages_test
+package go_gin_pages
 
 import (
 	"bytes"
@@ -7,7 +7,6 @@ import (
 	"io"
 	"net/http"
 	"os"
-	"tick_test/go_gin_pages"
 )
 
 var url string
@@ -20,7 +19,7 @@ var adminCredentials struct {
 }
 
 func setupIndex() {
-	url, _ = go_gin_pages.DetermineURL()
+	url, _ = DetermineURL()
 	client = &http.Client{}
 	adminCredentialsFile, err := os.Open(adminCredentialsPath)
 	if err != nil {

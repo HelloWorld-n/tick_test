@@ -1,4 +1,4 @@
-package go_gin_pages_test
+package go_gin_pages
 
 import (
 	"bytes"
@@ -197,4 +197,3 @@ func TestDeleteBook(t *testing.T) {
 
 	t.Run("DeleteNonExisting", bookDeleter("invalid_code"))
 }
-
