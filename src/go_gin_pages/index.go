@@ -5,6 +5,7 @@ import (
 	"io"
 	"net/http"
 	"os"
+	"strings"
 	"time"
 
 	"tick_test/repository"
@@ -12,7 +13,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-const urlFile = "../.congih/url.txt"
+const urlFile = "../.config/url.txt"
 
 func index(c *gin.Context) {
 	if err := repository.LoadIteration(); err != nil {
@@ -48,7 +49,7 @@ func DetermineURL() (url string, err error) {
 
 	b, err := io.ReadAll(file)
 	if err == nil {
-		url = string(b)
+		url = strings.TrimSpace(string(b))
 	}
 	return
 }
