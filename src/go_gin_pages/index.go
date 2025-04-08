@@ -9,19 +9,13 @@ import (
 	"strings"
 	"time"
 
+	"tick_test/internal/config"
 	"tick_test/repository"
 
 	"github.com/gin-gonic/gin"
-	"gopkg.in/yaml.v2"
 )
 
 const urlFile = "../.config/url.txt"
-const configFile = "../config.yaml"
-
-type Config struct {
-	BaseURL string `yaml:"baseURL"`
-	Port    string `yaml:"port"`
-}
 
 func index(c *gin.Context) {
 	if err := repository.LoadIteration(); err != nil {
@@ -63,29 +57,9 @@ func DetermineURL() (url string, err error) {
 }
 
 func UseConfigToDetermineURL() (url string, err error) {
-	config := Config{
-		BaseURL: "localhost",
-		Port:    "4041",
-	}
-	url = net.JoinHostPort(config.BaseURL, config.Port)
-
-	file, err := os.Open(configFile)
-	if err != nil {
-		return
-	}
-	defer file.Close()
-
-	data, err := io.ReadAll(file)
-	if err != nil {
-		return
-	}
-
-	if err = yaml.Unmarshal(data, &config); err != nil {
-		return
-	}
-
-	url = net.JoinHostPort(config.BaseURL, config.Port)
-
+	cfg := new(config.Config)
+	cfg, err = config.GetConfig()
+	url = net.JoinHostPort(cfg.BaseURL, cfg.Port)
 	return
 }
 
