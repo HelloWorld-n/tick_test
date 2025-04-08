@@ -18,8 +18,8 @@ const urlFile = "../.config/url.txt"
 const configFile = "../config.yaml"
 
 type Config struct {
-	BaseURL string `yaml:"BaseUrl"`
-	Port    int    `yaml:"Port"`
+	BaseURL string `yaml:"baseURL"`
+	Port    int    `yaml:"port"`
 }
 
 func index(c *gin.Context) {
