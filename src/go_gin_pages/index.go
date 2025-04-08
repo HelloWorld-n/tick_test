@@ -3,6 +3,7 @@ package go_gin_pages
 import (
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"strings"
@@ -19,7 +20,7 @@ const configFile = "../config.yaml"
 
 type Config struct {
 	BaseURL string `yaml:"baseURL"`
-	Port    int    `yaml:"port"`
+	Port    string `yaml:"port"`
 }
 
 func index(c *gin.Context) {
@@ -64,9 +65,9 @@ func DetermineURL() (url string, err error) {
 func UseConfigToDetermineURL() (url string, err error) {
 	config := Config{
 		BaseURL: "localhost",
-		Port:    4041,
+		Port:    "4041",
 	}
-	url = fmt.Sprint(config.BaseURL, ":", config.Port)
+	url = net.JoinHostPort(config.BaseURL, config.Port)
 
 	file, err := os.Open(configFile)
 	if err != nil {
@@ -83,7 +84,7 @@ func UseConfigToDetermineURL() (url string, err error) {
 		return
 	}
 
-	url = fmt.Sprint(config.BaseURL, ":", config.Port)
+	url = net.JoinHostPort(config.BaseURL, config.Port)
 
 	return
 }
