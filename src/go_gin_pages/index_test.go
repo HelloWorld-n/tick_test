@@ -19,7 +19,7 @@ var adminCredentials struct {
 }
 
 func setupIndex() {
-	url, _ = DetermineURL()
+	url, _ = UseConfigToDetermineURL()
 	client = &http.Client{}
 	adminCredentialsFile, err := os.Open(adminCredentialsPath)
 	if err != nil {
