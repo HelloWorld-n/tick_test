@@ -7,8 +7,6 @@ import (
 	"gopkg.in/yaml.v2"
 )
 
-const configFile = "../config.yaml"
-
 type Config struct {
 	BaseURL string `yaml:"baseURL"`
 	Port    string `yaml:"port"`
@@ -16,12 +14,15 @@ type Config struct {
 
 var config *Config = nil
 
-func GetConfig() (cfg *Config, err error) {
+func GetConfig(path string) (cfg *Config, err error) {
 	if config != nil {
 		return
 	}
+	cfg = &Config{
+		Port: "4041",
+	}
 
-	file, err := os.Open(configFile)
+	file, err := os.Open(path)
 	if err != nil {
 		return
 	}
@@ -32,7 +33,6 @@ func GetConfig() (cfg *Config, err error) {
 		return
 	}
 
-	cfg = new(Config)
 	err = yaml.Unmarshal(data, &cfg)
 	return
 }

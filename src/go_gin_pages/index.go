@@ -56,11 +56,8 @@ func DetermineURL() (url string, err error) {
 	return
 }
 
-func UseConfigToDetermineURL() (url string, err error) {
-	cfg := new(config.Config)
-	cfg, err = config.GetConfig()
-	url = net.JoinHostPort(cfg.BaseURL, cfg.Port)
-	return
+func UseConfigToDetermineURL(cfg *config.Config) (url string) {
+	return net.JoinHostPort(cfg.BaseURL, cfg.Port)
 }
 
 func Prepare(engine *gin.Engine, url string) {
