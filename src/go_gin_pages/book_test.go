@@ -13,9 +13,9 @@ import (
 )
 
 type bookData struct {
-	Title  string `json:"Title"`
-	Author string `json:"Author"`
-	Code   string `json:"Code"`
+	Title  string `json:"title"`
+	Author string `json:"author"`
+	Code   string `json:"code"`
 }
 
 var books []bookData
