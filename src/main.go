@@ -16,7 +16,8 @@ func main() {
 	fmt.Println("PATH", *configPath)
 	cfg, err := config.GetConfig(*configPath)
 	if err != nil && !os.IsNotExist(err) {
-		panic(err)
+		fmt.Fprintln(os.Stderr, err.Error())
+		os.Exit(2)
 	}
 	url := go_gin_pages.UseConfigToDetermineURL(cfg)
 	ginServer := gin.Default()
