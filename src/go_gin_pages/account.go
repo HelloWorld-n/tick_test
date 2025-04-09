@@ -29,19 +29,19 @@ func patchPromoteAccount(c *gin.Context) {
 	_, role, err := confirmAccountFromGinContext(c)
 	if role != "Admin" {
 		c.JSON(http.StatusUnauthorized, gin.H{
-			"Error": fmt.Errorf("%w: only admin can modify roles", errDefs.ErrUnauthorized),
+			"error": fmt.Errorf("%w: only admin can modify roles", errDefs.ErrUnauthorized),
 		})
 		return
 	}
 	if err != nil {
-		c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": err.Error()})
+		c.JSON(errDefs.DetermineStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 
 	// apply changes
 	var data = new(types.AccountPatchPromoteData)
 	if err := c.ShouldBindJSON(data); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	repository.PromoteExistingAccount(data)
@@ -50,17 +50,17 @@ func patchPromoteAccount(c *gin.Context) {
 func patchAccount(c *gin.Context) {
 	username, err := confirmUserFromGinContext(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"Error": err.Error()})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 	var data = new(types.AccountPatchData)
 	if err := c.ShouldBindJSON(data); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	err = repository.UpdateExistingAccount(username, data)
 	if err != nil {
-		c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": err.Error()})
+		c.JSON(errDefs.DetermineStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, nil)
@@ -71,7 +71,7 @@ func deleteAccount(c *gin.Context) {
 
 	exists, err := repository.UserExists(username)
 	if err != nil {
-		c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": err.Error()})
+		c.JSON(errDefs.DetermineStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 	if !exists {
@@ -81,11 +81,11 @@ func deleteAccount(c *gin.Context) {
 
 	username, err = confirmUserFromGinContext(c)
 	if err != nil {
-		c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": err.Error()})
+		c.JSON(errDefs.DetermineStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 	if err := repository.DeleteAccount(username); err != nil {
-		c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": err.Error()})
+		c.JSON(errDefs.DetermineStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusAccepted, nil)
@@ -152,7 +152,7 @@ func login(c *gin.Context) {
 	username := c.GetHeader("Username")
 	password := c.GetHeader("Password")
 	if err := repository.ConfirmAccount(username, password); err != nil {
-		c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": err.Error()})
+		c.JSON(errDefs.DetermineStatus(err), gin.H{"error": err.Error()})
 		return
 	} else {
 		token := generateToken(username)
@@ -163,7 +163,7 @@ func login(c *gin.Context) {
 func getAllAccounts(c *gin.Context) {
 	accounts, err := repository.FindAllAccounts()
 	if err != nil {
-		c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": err.Error()})
+		c.JSON(errDefs.DetermineStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, accounts)
