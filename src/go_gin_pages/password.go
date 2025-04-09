@@ -21,15 +21,15 @@ type runeChecker struct {
 var runeCheckers = make([]runeChecker, 0)
 
 type PasswordSimpleConfig struct {
-	Size    int      `json:"Size"     binding:"omitempty,gt=0"`
-	MinSize int      `json:"MinSize"  binding:"omitempty,gt=0"`
-	MaxSize int      `json:"MaxSize"  binding:"omitempty,gtefield=MinSize"`
-	Charset []string `json:"Charset"  binding:"required,min=2,dive,required"`
+	Size    int      `json:"size"     binding:"omitempty,gt=0"`
+	MinSize int      `json:"minSize"  binding:"omitempty,gt=0"`
+	MaxSize int      `json:"maxSize"  binding:"omitempty,gtefield=MinSize"`
+	Charset []string `json:"charset"  binding:"required,min=2,dive,required"`
 }
 
 type PasswordSimpleStackConfig []struct {
 	PasswordSimpleConfig
-	InclusionChances float64 `json:"InclusionChances" binding:"omitempty,min=0,max=1"`
+	InclusionChances float64 `json:"inclusionChances" binding:"omitempty,min=0,max=1"`
 }
 
 func (conf PasswordSimpleStackConfig) extractPasswordSimpleConfig(i int) PasswordSimpleConfig {
@@ -50,13 +50,13 @@ func passwordConfigStructLevelValidation(sl validator.StructLevel) {
 	providedMinXorMan := (config.MinSize > 0) != (config.MaxSize > 0)
 
 	if providedSize && providedMinOrMax {
-		sl.ReportError(config.Size, "Size", "Size", "nand", "MinSize,MaxSize")
+		sl.ReportError(config.Size, "size", "size", "nand", "minSize,maxSize")
 	}
 	if !providedSize && !providedMinAndMax {
-		sl.ReportError(config.Size, "Size", "Size", "or", "MinSize,MaxSize")
+		sl.ReportError(config.Size, "size", "size", "or", "minSize,maxSize")
 	}
 	if providedMinXorMan {
-		sl.ReportError(config.Size, "(MinSize,MaxSize)", "MinSize", "nxor", "MaxSize")
+		sl.ReportError(config.Size, "(minSize,maxSize)", "minSize", "nxor", "maxSize")
 	}
 }
 
@@ -86,8 +86,8 @@ func ratePassword(c *gin.Context) {
 	c.JSON(
 		http.StatusOK,
 		gin.H{
-			"Password": password,
-			"Score":    score,
+			"password": password,
+			"score":    score,
 		},
 	)
 }

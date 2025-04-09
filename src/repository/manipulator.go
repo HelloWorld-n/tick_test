@@ -13,19 +13,19 @@ import (
 const iterationManipulatorFile = "../.data/IterationManipulators.json"
 
 type IterationManipulator struct {
-	Code        string                  `json:"Code"`
-	Data        ManipulateIterationData `json:"Data"`
+	Code        string                  `json:"code"`
+	Data        ManipulateIterationData `json:"data"`
 	Manipulator *time.Ticker            `json:"-"`
 }
 
 type ManipulateIterationData struct {
-	Duration types.ISO8601Duration `json:"Duration" binding:"required"`
-	Value    int                   `json:"Value" binding:"required"`
+	Duration types.ISO8601Duration `json:"duration" binding:"required"`
+	Value    int                   `json:"value" binding:"required"`
 }
 
 type UpdateIterationManipulatorData struct {
-	Duration *types.ISO8601Duration `json:"Duration"`
-	Value    *int                   `json:"Value"`
+	Duration *types.ISO8601Duration `json:"duration"`
+	Value    *int                   `json:"value"`
 }
 
 var IterationManipulatorMutex sync.Mutex

@@ -1,12 +1,12 @@
 package types
 
 type Message struct {
-	From    string      `json:"From"`
-	To      string      `json:"To"`
-	When    ISO8601Date `json:"When"`
-	Content string      `json:"Content"`
+	From    string      `json:"from"`
+	To      string      `json:"to"`
+	When    ISO8601Date `json:"when"`
+	Content string      `json:"content"`
 }
 
 type MessageToSend struct {
-	Message Message `json:"Message"`
+	Message Message `json:"message"`
 }
