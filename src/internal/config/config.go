@@ -33,6 +33,6 @@ func GetConfig(path string) (cfg *Config, err error) {
 		return
 	}
 
-	err = yaml.Unmarshal(data, &cfg)
+	err = yaml.Unmarshal(data, cfg)
 	return
 }
