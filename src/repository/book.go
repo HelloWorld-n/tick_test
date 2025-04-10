@@ -37,7 +37,7 @@ func FindPaginatedBooks(pageSize int, pageNumber int) (books []types.Book, err e
 
 	offset := (pageNumber - 1) * pageSize
 
-	query := `SELECT code, title, author FROM book LIMIT $1 OFFSET $2`
+	query := `SELECT code, title, author FROM book ORDER BY id LIMIT $1 OFFSET $2`
 	rows, err := database.Query(query, pageSize, offset)
 	if err != nil {
 		return nil, err
