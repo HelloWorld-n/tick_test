@@ -14,7 +14,7 @@ This document provides examples of requests and responses for the available API 
 
 ---
 
-### GET `/`
+### GET `/v1`
 
 Example Response:  
 ```json
@@ -31,7 +31,7 @@ Example Response:
 
 ---
 
-### POST `/account/register`
+### POST `/v1/accounts/register`
 
 Example Request:
 ```json
@@ -47,7 +47,7 @@ Example Request:
 
 ---
 
-### GET `/account/all`
+### GET `/v1/accounts/all`
 
 Example Response:
 ```json
@@ -66,7 +66,7 @@ Example Response:
 
 ---
 
-### DELETE `/account/delete`
+### DELETE `/v1/accounts/delete`
 
 > Deletes the account identified by the specified username.
 
@@ -88,7 +88,7 @@ Example Request:
 
 ---
 
-### PATCH `/account/promote`
+### PATCH `/v1/accounts/promote`
 
 Example Request:
 ```json
@@ -107,7 +107,7 @@ Example Request:
 
 ---
 
-### GET `/book/all`
+### GET `/v1/books/all`
 
 Example Response:
 ```json
@@ -129,7 +129,7 @@ Example Response:
 
 ---
 
-### GET `/book/code/`*code*
+### GET `/v1/books/code/`*code*
 
 Example Response:
 ```json
@@ -144,7 +144,7 @@ Example Response:
 
 ---
 
-### POST `/book`
+### POST `/v1/books`
 
 Example Request:
 ```json
@@ -158,7 +158,7 @@ Example Request:
 
 ---
 
-### PATCH `/book/`*code*
+### PATCH `/v1/books/`*code*
 
 Example Request:
 ```json
@@ -172,7 +172,7 @@ Example Request:
 
 ---
 
-### DELETE `/book/`*code*
+### DELETE `/v1/books/`*code*
 
 > Deletes the book with the specified code.
 
@@ -180,7 +180,7 @@ Example Request:
 
 ---
 
-### GET `/password`
+### GET `/v1/password`
 Example Response:
 ```json
 ["PASSWORD", "HASHES"]
@@ -189,7 +189,7 @@ Example Response:
 
 ---
 
-### GET `/password/rate/`*password*
+### GET `/v1/password/rate/`*password*
 
 Example Response:
 ```json
@@ -202,7 +202,7 @@ Example Response:
 
 ---
 
-### POST `/password/simple`
+### POST `/v1/password/simple`
 
 Example Request:
 ```json
@@ -235,7 +235,7 @@ Example Response:
 
 ---
 
-### POST `/password/simple-stack`
+### POST `/v1/password/simple-stack`
 
 Example Request:
 ```json
@@ -262,7 +262,7 @@ Example Request:
 
 ---
 
-### GET `/sort`
+### GET `/v1/sort`
 
 Example Response:
 ```json
@@ -281,7 +281,7 @@ Example Response:
 
 ---
 
-### GET `/sort/meta`
+### GET `/v1/sort/meta`
 
 Example Response:
 ```json
@@ -299,7 +299,7 @@ Example Response:
 
 ---
 
-### GET `/sort/code/`*code*
+### GET `/v1/sort/code/`*code*
 
 Example Response:
 ```json
@@ -316,7 +316,7 @@ Example Response:
 
 ---
 
-### POST `/sort/increase`
+### POST `/v1/sort/increase`
 
 Request Body:
 ```json
@@ -327,7 +327,7 @@ Request Body:
 
 ---
 
-### POST `/sort/decrease`
+### POST `/v1/sort/decrease`
 
 Request Body:
 ```json
@@ -338,7 +338,7 @@ Request Body:
 
 ---
 
-### POST `/sort/increase-abs`
+### POST `/v1/sort/increase-abs`
 
 Request Body:
 ```json
@@ -349,7 +349,7 @@ Request Body:
 
 ---
 
-### POST `/sort/decrease-abs`
+### POST `/v1/sort/decrease-abs`
 
 Request Body:
 ```json
@@ -360,7 +360,7 @@ Request Body:
 
 ---
 
-### POST `/sort/calculative/intensive`
+### POST `/v1/sort/calculative/intensive`
 
 Request Body:
 ```json
@@ -371,7 +371,7 @@ Request Body:
 
 ---
 
-### POST `/sort/calculative/calculate-once`
+### POST `/v1/sort/calculative/calculate-once`
 
 Request Body:
 ```json
@@ -382,7 +382,7 @@ Request Body:
 
 ---
 
-### DELETE `/sort/calculative/delete-all`
+### DELETE `/v1/sort/calculative/delete-all`
 
 > Deletes all sorting information.
 
@@ -392,7 +392,7 @@ Request Body:
 
 ---
 
-### GET `/manipulator`
+### GET `/v1/manipulators`
 Example Response:
 ```json
 [
@@ -409,7 +409,7 @@ Example Response:
 
 ---
 
-### GET `/manipulator/code/`*code*
+### GET `/v1/manipulators/code/`*code*
 
 Example: GET /manipulator/code/COMPLICATION
 ```json
@@ -422,7 +422,7 @@ Example: GET /manipulator/code/COMPLICATION
 
 ---
 
-### POST `/manipulator`
+### POST `/v1/manipulators`
 
 Request Body:
 ```json
@@ -437,7 +437,7 @@ Request Body:
 
 ---
 
-### PATCH `/manipulator/code/`*code*
+### PATCH `/v1/manipulators/code/`*code*
 
 Request Body:
 ```json
@@ -451,7 +451,7 @@ Request Body:
 
 ---
 
-### DELETE `/manipulator/code/`*code*
+### DELETE `/v1/manipulators/code/`*code*
 
 > Deletes an iteration manipulator identified by its unique code. No request body is required.
 
