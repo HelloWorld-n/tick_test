@@ -36,6 +36,15 @@ func getPaginatedBooks(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 		return
 	}
+	if pageNumber <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "pageNumber must be greater than 0"})
+		return
+	}
+	if pageSize <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "pageSize must be greater than 0"})
+		return
+	}
+
 	books, err := repository.FindPaginatedBooks(pageSize, pageNumber)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
