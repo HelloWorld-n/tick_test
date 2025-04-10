@@ -21,6 +21,7 @@ func GetConfig(path string) (cfg *Config, err error) {
 	cfg = &Config{
 		Port: "4041",
 	}
+	config = cfg
 
 	file, err := os.Open(path)
 	if err != nil {
