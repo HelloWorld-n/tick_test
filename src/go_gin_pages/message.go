@@ -14,13 +14,13 @@ import (
 func sendMessage(c *gin.Context) {
 	var data types.MessageToSend
 	if err := c.ShouldBindJSON(&data); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	username, err := confirmUserFromGinContext(c)
 	if err != nil {
-		c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": "user authentication failed; " + err.Error()})
+		c.JSON(errDefs.DetermineStatus(err), gin.H{"error": "user authentication failed; " + err.Error()})
 		return
 	}
 
@@ -28,7 +28,7 @@ func sendMessage(c *gin.Context) {
 	data.Message.When = types.ISO8601Date(time.Now().UTC().Format(time.RFC3339))
 
 	if err := repository.SaveMessage(&data.Message); err != nil {
-		c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": err.Error()})
+		c.JSON(errDefs.DetermineStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -37,13 +37,13 @@ func sendMessage(c *gin.Context) {
 func getMessages(c *gin.Context) {
 	username, err := confirmUserFromGinContext(c)
 	if err != nil {
-		c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": "user authentication failed; " + err.Error()})
+		c.JSON(errDefs.DetermineStatus(err), gin.H{"error": "user authentication failed; " + err.Error()})
 		return
 	}
 
 	msgs, err := repository.FindMessages(username, true, true)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -53,13 +53,13 @@ func getMessages(c *gin.Context) {
 func getSentMessages(c *gin.Context) {
 	username, err := confirmUserFromGinContext(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"Error": "user authentication failed; " + err.Error()})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user authentication failed; " + err.Error()})
 		return
 	}
 
 	msgs, err := repository.FindMessages(username, true, false)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -69,13 +69,13 @@ func getSentMessages(c *gin.Context) {
 func getReceivedMessages(c *gin.Context) {
 	username, err := confirmUserFromGinContext(c)
 	if err != nil {
-		c.JSON(http.StatusUnauthorized, gin.H{"Error": "user authentication failed; " + err.Error()})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "user authentication failed; " + err.Error()})
 		return
 	}
 
 	msgs, err := repository.FindMessages(username, false, true)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 

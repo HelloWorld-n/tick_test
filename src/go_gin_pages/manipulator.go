@@ -36,12 +36,12 @@ func findIterationManipulatorByCode(c *gin.Context) {
 func createIterationManipulator(c *gin.Context) {
 	var data repository.ManipulateIterationData
 	if err := c.ShouldBindJSON(&data); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	dur, err := types.ParseISO8601Duration(data.Duration, time.Second)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	ticker := time.NewTicker(dur)
@@ -76,7 +76,7 @@ func createIterationManipulator(c *gin.Context) {
 
 	err = repository.SaveIterationManipulatorToDatabase(&iterationManipulator)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -96,7 +96,7 @@ func updateIterationManipulator(c *gin.Context) {
 
 	var data repository.UpdateIterationManipulatorData
 	if err := c.ShouldBindJSON(&data); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -104,7 +104,7 @@ func updateIterationManipulator(c *gin.Context) {
 		if v.Code == code {
 			_, err := repository.ApplyUpdateToIterationManipulator(data, v)
 			if err != nil {
-				c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+				c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 				return
 			}
 			c.JSON(http.StatusAccepted, v.Data)
@@ -122,7 +122,7 @@ func deleteIterationManipulator(c *gin.Context) {
 	} else {
 		err := repository.DeleteManipulatorFromDatabase(code)
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			return
 		}
 	}

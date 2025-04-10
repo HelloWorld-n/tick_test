@@ -1,24 +1,24 @@
 package types
 
 type AccountPostData struct {
-	Username     string `json:"Username" binding:"gt=4"`
-	Password     string `json:"Password" binding:"gt=8"`
-	SamePassword string `json:"SamePassword"`
-	Role         string `json:"Role"`
+	Username     string `json:"username" binding:"gt=4"`
+	Password     string `json:"password" binding:"gt=8"`
+	SamePassword string `json:"samePassword"`
+	Role         string `json:"role"`
 }
 
 type AccountPatchData struct {
-	Username     string `json:"Username"`
-	Password     string `json:"Password"`
-	SamePassword string `json:"SamePassword"`
+	Username     string `json:"username"`
+	Password     string `json:"password"`
+	SamePassword string `json:"samePassword"`
 }
 
 type AccountPatchPromoteData struct {
-	Username string `json:"Username" binding:"required"`
-	Role     string `json:"Role" binding:"required"`
+	Username string `json:"username" binding:"required"`
+	Role     string `json:"role" binding:"required"`
 }
 
 type AccountGetData struct {
-	Username string `json:"Username" binding:"gt=4"`
-	Role     string `json:"Role"`
+	Username string `json:"username" binding:"gt=4"`
+	Role     string `json:"role"`
 }

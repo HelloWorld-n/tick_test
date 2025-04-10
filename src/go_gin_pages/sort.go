@@ -20,20 +20,20 @@ var validSortTypes []string = make([]string, 0)
 var sortMutex sync.Mutex
 
 type intensiveCalculationResult struct {
-	Code        string
-	SortType    string
-	StartedAt   types.ISO8601Date
-	CompletedAt types.ISO8601Date
-	TimeTaken   types.ISO8601Duration
-	Result      any
+	Code        string                `json:"code"`
+	SortType    string                `json:"sortType"`
+	StartedAt   types.ISO8601Date     `json:"startedAt"`
+	CompletedAt types.ISO8601Date     `json:"completedAt"`
+	TimeTaken   types.ISO8601Duration `json:"timeTaken"`
+	Result      any                   `json:"result"`
 }
 
 type intensiveCalculationMeta struct {
-	SortType         string
-	AverageTimeTaken types.ISO8601Duration
-	MinTimeTaken     types.ISO8601Duration
-	MaxTimeTaken     types.ISO8601Duration
-	SampleSize       uint64
+	SortType         string                `json:"sortType"`
+	AverageTimeTaken types.ISO8601Duration `json:"averageTimeTaken"`
+	MinTimeTaken     types.ISO8601Duration `json:"minTimeTaken"`
+	MaxTimeTaken     types.ISO8601Duration `json:"maxTimeTaken"`
+	SampleSize       uint64                `json:"sampleSize"`
 }
 
 var intensiveCalculationResults []*intensiveCalculationResult

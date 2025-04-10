@@ -15,7 +15,7 @@ import (
 func getAllBooks(c *gin.Context) {
 	books, err := repository.FindAllBooks()
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, books)
@@ -26,10 +26,10 @@ func getBook(c *gin.Context) {
 	book, err := repository.FindBookByCode(code)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			c.JSON(http.StatusConflict, gin.H{"Error": "book not found"})
+			c.JSON(http.StatusConflict, gin.H{"error": "book not found"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusOK, book)
@@ -38,7 +38,7 @@ func getBook(c *gin.Context) {
 func postBook(c *gin.Context) {
 	var book types.Book
 	if err := c.ShouldBindJSON(&book); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -54,7 +54,7 @@ func postBook(c *gin.Context) {
 	}
 
 	if err := repository.CreateBook(&book); err != nil {
-		c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": "code already exists"})
+		c.JSON(errDefs.DetermineStatus(err), gin.H{"error": "code already exists"})
 		return
 	}
 
@@ -67,22 +67,22 @@ func patchBook(c *gin.Context) {
 	_, err := repository.FindBookByCode(code)
 	if err != nil {
 		if err == sql.ErrNoRows {
-			c.JSON(http.StatusConflict, gin.H{"Error": "book not found"})
+			c.JSON(http.StatusConflict, gin.H{"error": "book not found"})
 			return
 		}
-		c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	var updates types.Book
 	if err := c.ShouldBindJSON(&updates); err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	updatedBook, err := repository.UpdateBookByCode(code, updates)
 	if err != nil {
-		c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": err.Error()})
+		c.JSON(errDefs.DetermineStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -94,7 +94,7 @@ func deleteBook(c *gin.Context) {
 
 	rowsAffected, err := repository.RemoveBookByCode(code)
 	if err != nil {
-		c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": err.Error()})
+		c.JSON(errDefs.DetermineStatus(err), gin.H{"error": err.Error()})
 		return
 	}
 
@@ -109,14 +109,14 @@ func RoleRequirer(handler gin.HandlerFunc, roles []string) (fn func(c *gin.Conte
 	return func(c *gin.Context) {
 		username, err := confirmUserFromGinContext(c)
 		if err != nil {
-			c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": err.Error()})
+			c.JSON(errDefs.DetermineStatus(err), gin.H{"error": err.Error()})
 			c.Abort()
 			return
 		}
 
 		userRole, err := repository.FindUserRole(username)
 		if err != nil {
-			c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": "failed to retrieve user role"})
+			c.JSON(errDefs.DetermineStatus(err), gin.H{"error": "failed to retrieve user role"})
 			c.Abort()
 			return
 		}
@@ -131,8 +131,8 @@ func RoleRequirer(handler gin.HandlerFunc, roles []string) (fn func(c *gin.Conte
 
 		if !ok {
 			c.JSON(http.StatusForbidden, gin.H{
-				"Error":      "user does not have the required role",
-				"ValidRoles": roles,
+				"error":      "user does not have the required role",
+				"validRoles": roles,
 			})
 			c.Abort()
 			return
