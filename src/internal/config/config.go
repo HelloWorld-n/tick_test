@@ -13,11 +13,11 @@ type Config struct {
 
 func GetConfig(path string) (cfg *Config, err error) {
 	data, err := os.ReadFile(path)
-	if err != nil {
-		return
-	}
 	cfg = &Config{
 		Port: "4041",
+	}
+	if err != nil {
+		return
 	}
 	err = yaml.Unmarshal(data, cfg)
 	return
