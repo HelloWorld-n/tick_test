@@ -3,11 +3,13 @@ package go_gin_pages
 import (
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"os"
 	"strings"
 	"time"
 
+	"tick_test/internal/config"
 	"tick_test/repository"
 
 	"github.com/gin-gonic/gin"
@@ -52,6 +54,10 @@ func DetermineURL() (url string, err error) {
 		url = strings.TrimSpace(string(b))
 	}
 	return
+}
+
+func UseConfigToDetermineURL(cfg *config.Config) (url string) {
+	return net.JoinHostPort(cfg.BaseURL, cfg.Port)
 }
 
 func Prepare(engine *gin.Engine, url string) {
