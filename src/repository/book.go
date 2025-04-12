@@ -29,6 +29,32 @@ func FindAllBooks() (books []types.Book, err error) {
 	return books, nil
 }
 
+func FindPaginatedBooks(pageSize int, pageNumber int) (books []types.Book, err error) {
+	if database == nil {
+		err = errDefs.ErrDatabaseOffline
+		return
+	}
+
+	offset := (pageNumber - 1) * pageSize
+
+	query := `SELECT code, title, author FROM book ORDER BY id LIMIT $1 OFFSET $2`
+	rows, err := database.Query(query, pageSize, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	books = make([]types.Book, 0)
+	for rows.Next() {
+		var book types.Book
+		if err := rows.Scan(&book.Code, &book.Title, &book.Author); err != nil {
+			return nil, err
+		}
+		books = append(books, book)
+	}
+	return books, nil
+}
+
 func FindBookByCode(code string) (book types.Book, err error) {
 	if database == nil {
 		err = errDefs.ErrDatabaseOffline

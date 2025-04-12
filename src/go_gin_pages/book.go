@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"fmt"
 	"net/http"
+	"strconv"
 	"tick_test/repository"
 	"tick_test/types"
 	"tick_test/utils/errDefs"
@@ -14,6 +15,37 @@ import (
 
 func getAllBooks(c *gin.Context) {
 	books, err := repository.FindAllBooks()
+	if err != nil {
+		c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+		return
+	}
+	c.JSON(http.StatusOK, books)
+}
+
+func getPaginatedBooks(c *gin.Context) {
+	var pageSize, pageNumber int
+	var err error
+
+	pageSize, err = strconv.Atoi(c.Query("pageSize"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		return
+	}
+	pageNumber, err = strconv.Atoi(c.Query("pageNumber"))
+	if err != nil {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+		return
+	}
+	if pageNumber <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "pageNumber must be greater than 0"})
+		return
+	}
+	if pageSize <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"Error": "pageSize must be greater than 0"})
+		return
+	}
+
+	books, err := repository.FindPaginatedBooks(pageSize, pageNumber)
 	if err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 		return
@@ -148,6 +180,7 @@ func requireBookKeeperRole(handler gin.HandlerFunc) gin.HandlerFunc {
 
 func prepareBook(route *gin.RouterGroup) {
 	route.GET("/all", repository.EnsureDatabaseIsOK(getAllBooks))
+	route.GET("/", repository.EnsureDatabaseIsOK(getPaginatedBooks))
 	route.GET("/code/:code", repository.EnsureDatabaseIsOK(getBook))
 	route.POST("/create", repository.EnsureDatabaseIsOK(requireBookKeeperRole(postBook)))
 	route.PATCH("/code/:code", repository.EnsureDatabaseIsOK(requireBookKeeperRole(patchBook)))
