@@ -6,13 +6,13 @@ import (
 	errDefs "tick_test/utils/errDefs"
 )
 
-func FindAllBooks() (books []types.Book, err error) {
-	if database == nil {
+func (r *Repo) FindAllBooks() (books []types.Book, err error) {
+	if r.DB.Conn == nil {
 		err = errDefs.ErrDatabaseOffline
 		return
 	}
 	query := `SELECT code, title, author FROM book`
-	rows, err := database.Query(query)
+	rows, err := r.DB.Conn.Query(query)
 	if err != nil {
 		return nil, err
 	}
@@ -29,8 +29,8 @@ func FindAllBooks() (books []types.Book, err error) {
 	return books, nil
 }
 
-func FindPaginatedBooks(pageSize int, pageNumber int) (books []types.Book, err error) {
-	if database == nil {
+func (r *Repo) FindPaginatedBooks(pageSize int, pageNumber int) (books []types.Book, err error) {
+	if r.DB.Conn == nil {
 		err = errDefs.ErrDatabaseOffline
 		return
 	}
@@ -38,7 +38,7 @@ func FindPaginatedBooks(pageSize int, pageNumber int) (books []types.Book, err e
 	offset := (pageNumber - 1) * pageSize
 
 	query := `SELECT code, title, author FROM book ORDER BY id LIMIT $1 OFFSET $2`
-	rows, err := database.Query(query, pageSize, offset)
+	rows, err := r.DB.Conn.Query(query, pageSize, offset)
 	if err != nil {
 		return nil, err
 	}
@@ -55,12 +55,12 @@ func FindPaginatedBooks(pageSize int, pageNumber int) (books []types.Book, err e
 	return books, nil
 }
 
-func FindBookByCode(code string) (book types.Book, err error) {
-	if database == nil {
+func (r *Repo) FindBookByCode(code string) (book types.Book, err error) {
+	if r.DB.Conn == nil {
 		err = errDefs.ErrDatabaseOffline
 		return
 	}
-	err = database.QueryRow(
+	err = r.DB.Conn.QueryRow(
 		`SELECT code, title, author FROM book WHERE code = $1`,
 		code,
 	).Scan(&book.Code, &book.Title, &book.Author)
@@ -71,20 +71,20 @@ func FindBookByCode(code string) (book types.Book, err error) {
 	return book, nil
 }
 
-func CreateBook(book *types.Book) (err error) {
-	if database == nil {
+func (r *Repo) CreateBook(book *types.Book) (err error) {
+	if r.DB.Conn == nil {
 		err = errDefs.ErrDatabaseOffline
 		return
 	}
-	_, err = database.Exec(
+	_, err = r.DB.Conn.Exec(
 		`INSERT INTO book (code, title, author) VALUES ($1, $2, $3)`,
 		book.Code, book.Title, book.Author,
 	)
 	return err
 }
 
-func UpdateBookByCode(code string, updates types.Book) (book types.Book, err error) {
-	if database == nil {
+func (r *Repo) UpdateBookByCode(code string, updates types.Book) (book types.Book, err error) {
+	if r.DB.Conn == nil {
 		err = errDefs.ErrDatabaseOffline
 		return
 	}
@@ -110,13 +110,13 @@ func UpdateBookByCode(code string, updates types.Book) (book types.Book, err err
 	query := fmt.Sprintf("UPDATE book SET %s WHERE code = $%d", queryFields[:len(queryFields)-2], paramCount)
 	params = append(params, code)
 
-	_, err = database.Exec(query, params...)
+	_, err = r.DB.Conn.Exec(query, params...)
 	if err != nil {
 		return types.Book{}, err
 	}
 
 	var updatedBook types.Book
-	err = database.QueryRow(
+	err = r.DB.Conn.QueryRow(
 		`SELECT code, title, author FROM book WHERE code = $1`,
 		code,
 	).Scan(&updatedBook.Code, &updatedBook.Title, &updatedBook.Author)
@@ -127,12 +127,12 @@ func UpdateBookByCode(code string, updates types.Book) (book types.Book, err err
 	return updatedBook, nil
 }
 
-func RemoveBookByCode(code string) (n int64, err error) {
-	if database == nil {
+func (r *Repo) RemoveBookByCode(code string) (n int64, err error) {
+	if r.DB.Conn == nil {
 		err = errDefs.ErrDatabaseOffline
 		return
 	}
-	result, err := database.Exec(`DELETE FROM book WHERE code = $1`, code)
+	result, err := r.DB.Conn.Exec(`DELETE FROM book WHERE code = $1`, code)
 	if err != nil {
 		return 0, err
 	}
@@ -143,9 +143,9 @@ func RemoveBookByCode(code string) (n int64, err error) {
 	return rowsAffected, nil
 }
 
-func doPostgresPreparationForBook() {
-	if database != nil {
-		result, err := database.Exec(`
+func (r *Repo) doPostgresPreparationForBook() {
+	if r.DB.Conn != nil {
+		result, err := r.DB.Conn.Exec(`
 			CREATE TABLE IF NOT EXISTS book (
 				id SERIAL PRIMARY KEY,
 				code varchar(100) UNIQUE NOT NULL,

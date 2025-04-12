@@ -31,13 +31,13 @@ type UpdateIterationManipulatorData struct {
 var IterationManipulatorMutex sync.Mutex
 var IterationManipulators []*IterationManipulator = make([]*IterationManipulator, 0)
 
-func loadIterationManipulators() error {
-	if database != nil {
-		if err := LoadIterationManipulatorsFromDatabase(); err != nil {
+func (r *Repo) loadIterationManipulators() error {
+	if r.DB.Conn != nil {
+		if err := r.LoadIterationManipulatorsFromDatabase(); err != nil {
 			return err
 		}
 	} else {
-		if err := LoadIterationManipulatorsFromFile(); err != nil {
+		if err := r.LoadIterationManipulatorsFromFile(); err != nil {
 			return err
 		}
 	}
@@ -53,7 +53,7 @@ func loadIterationManipulators() error {
 	return nil
 }
 
-func ApplyUpdateToIterationManipulator(data UpdateIterationManipulatorData, v *IterationManipulator) (dur time.Duration, err error) {
+func (r *Repo) ApplyUpdateToIterationManipulator(data UpdateIterationManipulatorData, v *IterationManipulator) (dur time.Duration, err error) {
 	if data.Duration != nil {
 		dur, err = types.ParseISO8601Duration(*data.Duration, time.Second)
 		if err != nil {
@@ -68,8 +68,8 @@ func ApplyUpdateToIterationManipulator(data UpdateIterationManipulatorData, v *I
 	if data.Value != nil {
 		v.Data.Value = *data.Value
 	}
-	if database != nil {
-		err = UpdateManipulatorInDatabase(v.Code, v.Data.Duration, v.Data.Value)
+	if r.DB.Conn != nil {
+		err = r.UpdateManipulatorInDatabase(v.Code, v.Data.Duration, v.Data.Value)
 		if err != nil {
 			return 0, err
 		}
@@ -89,8 +89,8 @@ func ManipulateIteration(obj *IterationManipulator) error {
 	return nil
 }
 
-func LoadIterationManipulatorsFromFile() error {
-	manipulators, err := ReadManipulatorsFromFile()
+func (r *Repo) LoadIterationManipulatorsFromFile() error {
+	manipulators, err := r.ReadManipulatorsFromFile()
 	if err != nil {
 		return err
 	}
@@ -98,13 +98,13 @@ func LoadIterationManipulatorsFromFile() error {
 	return nil
 }
 
-func SaveIterationManipulators() error {
+func (r *Repo) SaveIterationManipulators() error {
 	IterationManipulatorMutex.Lock()
 	defer IterationManipulatorMutex.Unlock()
 	return WriteManipulatorsToFile(IterationManipulators)
 }
 
-func ReadManipulatorsFromFile() ([]*IterationManipulator, error) {
+func (r *Repo) ReadManipulatorsFromFile() ([]*IterationManipulator, error) {
 	file, err := os.Open(iterationManipulatorFile)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -137,10 +137,10 @@ func WriteManipulatorsToFile(manipulators []*IterationManipulator) error {
 	return encoder.Encode(manipulators)
 }
 
-func LoadIterationManipulatorsFromDatabase() error {
+func (r *Repo) LoadIterationManipulatorsFromDatabase() error {
 	query := `SELECT code, duration, value FROM manipulator`
 
-	rows, err := database.Query(query)
+	rows, err := r.DB.Conn.Query(query)
 	if err != nil {
 		return err
 	}
@@ -173,30 +173,30 @@ func LoadIterationManipulatorsFromDatabase() error {
 	return nil
 }
 
-func SaveIterationManipulatorToDatabase(obj *IterationManipulator) (err error) {
-	if database == nil {
+func (r *Repo) SaveIterationManipulatorToDatabase(obj *IterationManipulator) (err error) {
+	if r.DB.Conn == nil {
 		return
 	}
 	query := `INSERT INTO manipulator (code, duration, value) VALUES ($1, $2, $3)`
-	_, err = database.Exec(query, obj.Code, obj.Data.Duration, obj.Data.Value)
+	_, err = r.DB.Conn.Exec(query, obj.Code, obj.Data.Duration, obj.Data.Value)
 	return
 }
 
-func UpdateManipulatorInDatabase(code string, duration types.ISO8601Duration, value int) error {
+func (r *Repo) UpdateManipulatorInDatabase(code string, duration types.ISO8601Duration, value int) error {
 	query := `UPDATE manipulator SET duration = $1, value = $2 WHERE code = $3`
-	_, err := database.Exec(query, duration, value, code)
+	_, err := r.DB.Conn.Exec(query, duration, value, code)
 	return err
 }
 
-func DeleteManipulatorFromDatabase(code string) error {
+func (r *Repo) DeleteManipulatorFromDatabase(code string) error {
 	query := `DELETE FROM manipulator WHERE code = $1`
-	_, err := database.Exec(query, code)
+	_, err := r.DB.Conn.Exec(query, code)
 	return err
 }
 
-func doPostgresPreparationForManipulator() {
-	if database != nil {
-		result, _ := database.Query(`
+func (r *Repo) doPostgresPreparationForManipulator() {
+	if r.DB.Conn != nil {
+		result, _ := r.DB.Conn.Query(`
 			CREATE TABLE IF NOT EXISTS manipulator (
 				code varchar(100) PRIMARY KEY,
 				duration varchar(30) NOT NULL,

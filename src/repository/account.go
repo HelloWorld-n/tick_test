@@ -31,19 +31,19 @@ func confirmPassword(password string, hash string) (err error) {
 	return
 }
 
-func UserExists(username string) (exists bool, err error) {
+func (r *Repo) UserExists(username string) (exists bool, err error) {
 	query := `SELECT EXISTS(SELECT 1 FROM account WHERE username = $1);`
-	err = database.QueryRow(query, username).Scan(&exists)
+	err = r.DB.Conn.QueryRow(query, username).Scan(&exists)
 	if err != nil {
 		return false, fmt.Errorf("error checking user existence: %w", err)
 	}
 	return exists, nil
 }
 
-func ConfirmAccount(username string, password string) (err error) {
+func (r *Repo) ConfirmAccount(username string, password string) (err error) {
 	query := `SELECT password FROM account WHERE $1 = username`
 
-	rows, err := database.Query(query, username)
+	rows, err := r.DB.Conn.Query(query, username)
 	if err != nil {
 		return
 	}
@@ -65,7 +65,7 @@ func ConfirmAccount(username string, password string) (err error) {
 	return
 }
 
-func FindAllAccounts() (data []types.AccountGetData, err error) {
+func (r *Repo) FindAllAccounts() (data []types.AccountGetData, err error) {
 	query := `
 		SELECT 
 			username, 
@@ -73,7 +73,7 @@ func FindAllAccounts() (data []types.AccountGetData, err error) {
 		FROM account acc;
 	`
 
-	rows, err := database.Query(query)
+	rows, err := r.DB.Conn.Query(query)
 	if err != nil {
 		return nil, err
 	}
@@ -95,14 +95,14 @@ func FindAllAccounts() (data []types.AccountGetData, err error) {
 	return data, nil
 }
 
-func ConfirmNoAdmins() (adminCount int, err error) {
+func (r *Repo) ConfirmNoAdmins() (adminCount int, err error) {
 	adminQuery := `
 		SELECT COUNT(*) 
 		FROM account a
 		JOIN role r ON a.role_id = r.id
 		WHERE r.name = 'Admin'
 	`
-	err = database.QueryRow(adminQuery).Scan(&adminCount)
+	err = r.DB.Conn.QueryRow(adminQuery).Scan(&adminCount)
 	if err != nil {
 		err = fmt.Errorf("%w; error checking existing admin accounts: %w", err, errDefs.ErrInternalServerError)
 	}
@@ -112,7 +112,7 @@ func ConfirmNoAdmins() (adminCount int, err error) {
 	return
 }
 
-func SaveAccount(obj *types.AccountPostData) (err error) {
+func (r *Repo) SaveAccount(obj *types.AccountPostData) (err error) {
 	if err = validateCredential(obj.Username, "Username"); err != nil {
 		return
 	}
@@ -125,7 +125,7 @@ func SaveAccount(obj *types.AccountPostData) (err error) {
 
 	var exists bool
 	checkQuery := `SELECT EXISTS(SELECT 1 FROM account WHERE username = $1);`
-	err = database.QueryRow(checkQuery, obj.Username).Scan(&exists)
+	err = r.DB.Conn.QueryRow(checkQuery, obj.Username).Scan(&exists)
 	if err != nil {
 		return fmt.Errorf("error checking user existence: %w", err)
 	}
@@ -133,7 +133,7 @@ func SaveAccount(obj *types.AccountPostData) (err error) {
 		return fmt.Errorf("%w; user with username %s", errDefs.ErrDoesExist, obj.Username)
 	}
 	if obj.Role == "Admin" {
-		_, err = ConfirmNoAdmins()
+		_, err = r.ConfirmNoAdmins()
 		if err != nil {
 			return
 		}
@@ -151,20 +151,20 @@ func SaveAccount(obj *types.AccountPostData) (err error) {
 		return
 	}
 
-	_, err = database.Exec(query, obj.Username, hashedPassword, obj.Role)
+	_, err = r.DB.Conn.Exec(query, obj.Username, hashedPassword, obj.Role)
 
 	return
 }
 
-func DeleteAccount(username string) error {
-	_, err := database.Exec(`DELETE FROM account WHERE username = $1`, username)
+func (r *Repo) DeleteAccount(username string) error {
+	_, err := r.DB.Conn.Exec(`DELETE FROM account WHERE username = $1`, username)
 	if err != nil {
 		return fmt.Errorf("error deleting account: %w", err)
 	}
 	return nil
 }
 
-func UpdateExistingAccount(username string, obj *types.AccountPatchData) (err error) {
+func (r *Repo) UpdateExistingAccount(username string, obj *types.AccountPatchData) (err error) {
 	// verify valid input
 	if err = validateCredential(obj.Username, "Username"); err != nil {
 		return
@@ -173,7 +173,7 @@ func UpdateExistingAccount(username string, obj *types.AccountPatchData) (err er
 		return
 	}
 	var count int
-	err = database.QueryRow(`SELECT COUNT(*) FROM account WHERE username = $1`, username).Scan(&count)
+	err = r.DB.Conn.QueryRow(`SELECT COUNT(*) FROM account WHERE username = $1`, username).Scan(&count)
 	if err != nil {
 		return err
 	}
@@ -193,13 +193,13 @@ func UpdateExistingAccount(username string, obj *types.AccountPatchData) (err er
 		if err != nil {
 			return err
 		}
-		_, err = database.Exec(`UPDATE account SET password = $1 WHERE username = $2`, hashedPassword, username)
+		_, err = r.DB.Conn.Exec(`UPDATE account SET password = $1 WHERE username = $2`, hashedPassword, username)
 		if err != nil {
 			return err
 		}
 	}
 	if obj.Username != "" && obj.Username != username {
-		_, err = database.Exec(`UPDATE account SET username = $1 WHERE username = $2`, obj.Username, username)
+		_, err = r.DB.Conn.Exec(`UPDATE account SET username = $1 WHERE username = $2`, obj.Username, username)
 		if err != nil {
 			return err
 		}
@@ -207,10 +207,10 @@ func UpdateExistingAccount(username string, obj *types.AccountPatchData) (err er
 	return
 }
 
-func PromoteExistingAccount(obj *types.AccountPatchPromoteData) (err error) {
+func (r *Repo) PromoteExistingAccount(obj *types.AccountPatchPromoteData) (err error) {
 	// verify valid input
 	var count int
-	err = database.QueryRow(`SELECT COUNT(*) FROM account WHERE username = $1`, obj.Username).Scan(&count)
+	err = r.DB.Conn.QueryRow(`SELECT COUNT(*) FROM account WHERE username = $1`, obj.Username).Scan(&count)
 	if err != nil {
 		return err
 	}
@@ -220,7 +220,7 @@ func PromoteExistingAccount(obj *types.AccountPatchPromoteData) (err error) {
 
 	// apply changes
 	if obj.Role != "" {
-		_, err = database.Exec(`UPDATE account SET role_id = (SELECT id FROM role WHERE name = $1) WHERE username = $2`, obj.Role, obj.Username)
+		_, err = r.DB.Conn.Exec(`UPDATE account SET role_id = (SELECT id FROM role WHERE name = $1) WHERE username = $2`, obj.Role, obj.Username)
 		if err != nil {
 			return err
 		}
@@ -228,7 +228,7 @@ func PromoteExistingAccount(obj *types.AccountPatchPromoteData) (err error) {
 	return
 }
 
-func FindUserRole(username string) (string, error) {
+func (r *Repo) FindUserRole(username string) (string, error) {
 	var role string
 	query := `
 		SELECT r.name 
@@ -236,30 +236,30 @@ func FindUserRole(username string) (string, error) {
 		JOIN role r ON a.role_id = r.id 
 		WHERE a.username = $1
 	`
-	err := database.QueryRow(query, username).Scan(&role)
+	err := r.DB.Conn.QueryRow(query, username).Scan(&role)
 	if err != nil {
 		return "", err
 	}
 	return role, nil
 }
 
-func doPostgresPreparationForAccount() {
-	if database != nil {
-		result, err := database.Exec(`
+func (r *Repo) doPostgresPreparationForAccount() {
+	if r.DB.Conn != nil {
+		result, err := r.DB.Conn.Exec(`
 			CREATE TABLE IF NOT EXISTS account (
 				username varchar(100) PRIMARY KEY,
 				password varchar(500) NOT NULL
 			);
 		`)
 		fmt.Println(result, err)
-		result, err = database.Exec(`
+		result, err = r.DB.Conn.Exec(`
 			CREATE TABLE IF NOT EXISTS role (
 				id SERIAL PRIMARY KEY,
 				name TEXT UNIQUE NOT NULL
 			);
 		`)
 		fmt.Println(result, err)
-		result, err = database.Exec(`
+		result, err = r.DB.Conn.Exec(`
 			INSERT INTO role (name) VALUES
 				('User'),
 				('BookKeeper'),
@@ -267,17 +267,17 @@ func doPostgresPreparationForAccount() {
 			ON CONFLICT (name) DO NOTHING;
 		`)
 		fmt.Println(result, err)
-		result, err = database.Exec(`
+		result, err = r.DB.Conn.Exec(`
 			ALTER TABLE account ADD COLUMN IF NOT EXISTS role_id INT REFERENCES role(id);
 		`)
 		fmt.Println(result, err)
-		result, err = database.Exec(`
+		result, err = r.DB.Conn.Exec(`
 			UPDATE account
 			SET role_id = (SELECT id FROM role WHERE name = 'User')
 			WHERE role_id IS NULL;
 		`)
 		fmt.Println(result, err)
-		result, err = database.Exec(`
+		result, err = r.DB.Conn.Exec(`
 			ALTER TABLE account
 			ALTER COLUMN role_id SET NOT NULL;
 		`)

@@ -17,8 +17,6 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-var database *sql.DB
-
 const iterationFile = "../.data/Iteration.json"
 const dbPathFile = "../.config/dbPath.txt"
 
@@ -30,35 +28,36 @@ type ResultIndex struct {
 var Iteration int
 var IterationMutex sync.Mutex
 
-func IsDatabaseEnabled() bool {
-	return database != nil
+func (r *Repo) IsDatabaseEnabled() bool {
+	return r.DB.Conn != nil
 }
 
-func DoPostgresPreparation() {
+func (r *Repo) DoPostgresPreparation() (db *sql.DB, err error) {
 	databasePath, err := LoadDatabasePath()
 	if err != nil {
 		return
 	}
-	databasePath = strings.TrimSpace(databasePath)
-	db, err := sql_conn.Prepare(databasePath)
+	db, err = sql_conn.Prepare(databasePath)
 
 	if err != nil {
 		fmt.Println(err)
+		return
 	} else {
-		database = db
+		r.DB.Conn = db
 	}
 
-	doPostgresPreparationForMessages()
-	doPostgresPreparationForAccount()
-	doPostgresPreparationForBook()
-	doPostgresPreparationForManipulator()
-	loadIterationManipulators()
+	r.doPostgresPreparationForMessages()
+	r.doPostgresPreparationForAccount()
+	r.doPostgresPreparationForBook()
+	r.doPostgresPreparationForManipulator()
+	r.loadIterationManipulators()
 	LoadIteration()
+	return
 }
 
-func EnsureDatabaseIsOK(fn func(*gin.Context)) func(c *gin.Context) {
+func (r *Repo) EnsureDatabaseIsOK(fn func(*gin.Context)) func(c *gin.Context) {
 	return func(c *gin.Context) {
-		if database == nil {
+		if r.DB.Conn == nil {
 			c.JSON(
 				http.StatusInternalServerError,
 				gin.H{
@@ -81,7 +80,7 @@ func LoadDatabasePath() (url string, err error) {
 
 	b, err := io.ReadAll(file)
 	url = string(b)
-
+	url = strings.TrimSpace(url)
 	return
 }
 

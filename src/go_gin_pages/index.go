@@ -60,7 +60,7 @@ func UseConfigToDetermineURL(cfg *config.Config) (url string) {
 	return net.JoinHostPort(cfg.BaseURL, cfg.Port)
 }
 
-func Prepare(engine *gin.Engine, url string) {
+func Prepare(engine *gin.Engine, url string, repo *repository.Repo) {
 	cmw := &corsMiddleware{
 		origin: url,
 	}
@@ -97,12 +97,12 @@ func Prepare(engine *gin.Engine, url string) {
 		c.Next()
 	})
 
-	repository.DoPostgresPreparation()
+	repo.DoPostgresPreparation()
 	engine.GET("/", index)
-	prepareManipulator(engine.Group("/manipulator"))
+	prepareManipulator(engine.Group("/manipulator"), repo)
 	prepareSort(engine.Group("/sort"))
 	preparePassword(engine.Group("/password"))
-	prepareAccount(engine.Group("/account"))
-	prepareMessage(engine.Group("/message"))
-	prepareBook(engine.Group("/book"))
+	prepareAccount(engine.Group("/account"), repo)
+	prepareMessage(engine.Group("/message"), repo)
+	prepareBook(engine.Group("/book"), repo)
 }
