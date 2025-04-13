@@ -11,7 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func sendMessage(repo *repository.Repo) gin.HandlerFunc {
+func sendMessageHandler(repo *repository.Repo) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var data types.MessageToSend
 		if err := c.ShouldBindJSON(&data); err != nil {
@@ -37,7 +37,7 @@ func sendMessage(repo *repository.Repo) gin.HandlerFunc {
 	}
 }
 
-func getMessages(repo *repository.Repo) gin.HandlerFunc {
+func getMessagesHandler(repo *repository.Repo) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		username, err := confirmUserFromGinContext(c, repo)
 		if err != nil {
@@ -55,7 +55,7 @@ func getMessages(repo *repository.Repo) gin.HandlerFunc {
 	}
 }
 
-func getSentMessages(repo *repository.Repo) gin.HandlerFunc {
+func getSentMessagesHandler(repo *repository.Repo) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		username, err := confirmUserFromGinContext(c, repo)
 		if err != nil {
@@ -73,7 +73,7 @@ func getSentMessages(repo *repository.Repo) gin.HandlerFunc {
 	}
 }
 
-func getReceivedMessages(repo *repository.Repo) gin.HandlerFunc {
+func getReceivedMessagesHandler(repo *repository.Repo) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		username, err := confirmUserFromGinContext(c, repo)
 		if err != nil {
@@ -92,8 +92,8 @@ func getReceivedMessages(repo *repository.Repo) gin.HandlerFunc {
 }
 
 func prepareMessage(route *gin.RouterGroup, repo *repository.Repo) {
-	route.POST("/send", repo.EnsureDatabaseIsOK(sendMessage(repo)))
-	route.GET("/user", repo.EnsureDatabaseIsOK(getMessages(repo)))
-	route.GET("/sent-by", repo.EnsureDatabaseIsOK(getSentMessages(repo)))
-	route.GET("/recv-by", repo.EnsureDatabaseIsOK(getReceivedMessages(repo)))
+	route.POST("/send", repo.EnsureDatabaseIsOK(sendMessageHandler(repo)))
+	route.GET("/user", repo.EnsureDatabaseIsOK(getMessagesHandler(repo)))
+	route.GET("/sent-by", repo.EnsureDatabaseIsOK(getSentMessagesHandler(repo)))
+	route.GET("/recv-by", repo.EnsureDatabaseIsOK(getReceivedMessagesHandler(repo)))
 }

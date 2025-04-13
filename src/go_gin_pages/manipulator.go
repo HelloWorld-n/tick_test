@@ -11,13 +11,13 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func findAllIterationManipulators(repo *repository.Repo) gin.HandlerFunc {
+func findAllIterationManipulatorsHandler(repo *repository.Repo) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.JSON(http.StatusOK, repository.IterationManipulators)
 	}
 }
 
-func findIterationManipulatorByCode(repo *repository.Repo) gin.HandlerFunc {
+func findIterationManipulatorByCodeHandler(repo *repository.Repo) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		code := c.Param("code")
 		for _, v := range repository.IterationManipulators {
@@ -30,7 +30,7 @@ func findIterationManipulatorByCode(repo *repository.Repo) gin.HandlerFunc {
 	}
 }
 
-func createIterationManipulator(repo *repository.Repo) gin.HandlerFunc {
+func createIterationManipulatorHandler(repo *repository.Repo) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var data repository.ManipulateIterationData
 		if err := c.ShouldBindJSON(&data); err != nil {
@@ -86,7 +86,7 @@ func createIterationManipulator(repo *repository.Repo) gin.HandlerFunc {
 	}
 }
 
-func updateIterationManipulator(repo *repository.Repo) gin.HandlerFunc {
+func updateIterationManipulatorHandler(repo *repository.Repo) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		code := c.Param("code")
 		var data repository.UpdateIterationManipulatorData
@@ -109,7 +109,7 @@ func updateIterationManipulator(repo *repository.Repo) gin.HandlerFunc {
 	}
 }
 
-func deleteIterationManipulator(repo *repository.Repo) gin.HandlerFunc {
+func deleteIterationManipulatorHandler(repo *repository.Repo) gin.HandlerFunc {
 	return func(c *gin.Context) {
 		code := c.Param("code")
 
@@ -138,9 +138,9 @@ func deleteIterationManipulator(repo *repository.Repo) gin.HandlerFunc {
 }
 
 func prepareManipulator(route *gin.RouterGroup, repo *repository.Repo) {
-	route.GET("", findAllIterationManipulators(repo))
-	route.GET("/code/:code", findIterationManipulatorByCode(repo))
-	route.POST("", createIterationManipulator(repo))
-	route.PATCH("/code/:code", updateIterationManipulator(repo))
-	route.DELETE("/code/:code", deleteIterationManipulator(repo))
+	route.GET("", findAllIterationManipulatorsHandler(repo))
+	route.GET("/code/:code", findIterationManipulatorByCodeHandler(repo))
+	route.POST("", createIterationManipulatorHandler(repo))
+	route.PATCH("/code/:code", updateIterationManipulatorHandler(repo))
+	route.DELETE("/code/:code", deleteIterationManipulatorHandler(repo))
 }
