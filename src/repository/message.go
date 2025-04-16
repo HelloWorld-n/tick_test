@@ -4,21 +4,14 @@ import (
 	"fmt"
 	"tick_test/types"
 	"tick_test/utils/errDefs"
+
+	"github.com/gin-gonic/gin"
 )
 
-type messageRepository interface {
-	SaveMessage(msg *types.Message)
+type MessageRepository interface {
+	EnsureDatabaseIsOK(fn func(*gin.Context)) func(c *gin.Context)
+	SaveMessage(msg *types.Message) error
 	FindMessages(username string, sent bool, recv bool) (msgs []types.Message, err error)
-}
-
-type MessageHandler struct {
-	MessageRepository messageRepository
-}
-
-func NewMessageHandler(messageRepo messageRepository) (res *MessageHandler) {
-	return &MessageHandler{
-		MessageRepository: messageRepo,
-	}
 }
 
 func (r *Repo) SaveMessage(msg *types.Message) error {

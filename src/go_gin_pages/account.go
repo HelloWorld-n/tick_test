@@ -24,10 +24,20 @@ var (
 	tokenStoreMutex sync.RWMutex
 )
 
-func patchPromoteAccountHandler(repo *repository.Repo) gin.HandlerFunc {
+type accountHandler struct {
+	repo repository.AccountRepository
+}
+
+func NewAccountHandler(accountRepo repository.AccountRepository) (res *accountHandler) {
+	return &accountHandler{
+		repo: accountRepo,
+	}
+}
+
+func (ah *accountHandler) patchPromoteAccountHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// verify privileges
-		_, role, err := confirmAccountFromGinContext(c, repo)
+		_, role, err := ah.confirmAccountFromGinContext(c)
 		if role != "Admin" {
 			c.JSON(http.StatusUnauthorized, gin.H{
 				"Error": fmt.Errorf("%w: only admin can modify roles", errDefs.ErrUnauthorized),
@@ -45,14 +55,14 @@ func patchPromoteAccountHandler(repo *repository.Repo) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 			return
 		}
-		repo.PromoteExistingAccount(data)
+		ah.repo.PromoteExistingAccount(data)
 		c.JSON(http.StatusOK, nil)
 	}
 }
 
-func patchAccountHandler(repo *repository.Repo) gin.HandlerFunc {
+func (ah *accountHandler) patchAccountHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		username, err := confirmUserFromGinContext(c, repo)
+		username, err := ah.confirmUserFromGinContext(c)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"Error": err.Error()})
 			return
@@ -62,7 +72,7 @@ func patchAccountHandler(repo *repository.Repo) gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 			return
 		}
-		err = repo.UpdateExistingAccount(username, data)
+		err = ah.repo.UpdateExistingAccount(username, data)
 		if err != nil {
 			c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": err.Error()})
 			return
@@ -71,11 +81,11 @@ func patchAccountHandler(repo *repository.Repo) gin.HandlerFunc {
 	}
 }
 
-func deleteAccountHandler(repo *repository.Repo) gin.HandlerFunc {
+func (ah *accountHandler) deleteAccountHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		username := c.GetHeader("Username")
 
-		exists, err := repo.UserExists(username)
+		exists, err := ah.repo.UserExists(username)
 		if err != nil {
 			c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": err.Error()})
 			return
@@ -85,12 +95,12 @@ func deleteAccountHandler(repo *repository.Repo) gin.HandlerFunc {
 			return
 		}
 
-		username, err = confirmUserFromGinContext(c, repo)
+		username, err = ah.confirmUserFromGinContext(c)
 		if err != nil {
 			c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": err.Error()})
 			return
 		}
-		if err := repo.DeleteAccount(username); err != nil {
+		if err := ah.repo.DeleteAccount(username); err != nil {
 			c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": err.Error()})
 			return
 		}
@@ -126,11 +136,11 @@ func confirmToken(val string) (username string, err error) {
 	return info.Username, nil
 }
 
-func confirmUserFromGinContext(c *gin.Context, repo *repository.Repo) (username string, err error) {
+func (ah *accountHandler) confirmUserFromGinContext(c *gin.Context) (username string, err error) {
 	if c.GetHeader("Password") != "" {
 		username = c.GetHeader("Username")
 		password := c.GetHeader("Password")
-		err = repo.ConfirmAccount(username, password)
+		err = ah.repo.ConfirmAccount(username, password)
 		return
 	}
 	if token := c.GetHeader("User-Token"); token != "" {
@@ -141,13 +151,13 @@ func confirmUserFromGinContext(c *gin.Context, repo *repository.Repo) (username 
 	return
 }
 
-func confirmAccountFromGinContext(c *gin.Context, repo *repository.Repo) (username string, role string, err error) {
-	username, err = confirmUserFromGinContext(c, repo)
+func (ah *accountHandler) confirmAccountFromGinContext(c *gin.Context) (username string, role string, err error) {
+	username, err = ah.confirmUserFromGinContext(c)
 	if err != nil {
 		return "", "", err
 	}
 
-	role, err = repo.FindUserRole(username)
+	role, err = ah.repo.FindUserRole(username)
 	if err != nil {
 		return username, "", fmt.Errorf("error retrieving user role: %w", err)
 	}
@@ -155,11 +165,11 @@ func confirmAccountFromGinContext(c *gin.Context, repo *repository.Repo) (userna
 	return username, role, nil
 }
 
-func loginHandler(repo *repository.Repo) gin.HandlerFunc {
+func (ah *accountHandler) loginHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		username := c.GetHeader("Username")
 		password := c.GetHeader("Password")
-		if err := repo.ConfirmAccount(username, password); err != nil {
+		if err := ah.repo.ConfirmAccount(username, password); err != nil {
 			c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": err.Error()})
 			return
 		} else {
@@ -169,9 +179,9 @@ func loginHandler(repo *repository.Repo) gin.HandlerFunc {
 	}
 }
 
-func getAllAccountsHandler(repo *repository.Repo) gin.HandlerFunc {
+func (ah *accountHandler) getAllAccountsHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		accounts, err := repo.FindAllAccounts()
+		accounts, err := ah.repo.FindAllAccounts()
 		if err != nil {
 			c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": err.Error()})
 			return
@@ -180,7 +190,7 @@ func getAllAccountsHandler(repo *repository.Repo) gin.HandlerFunc {
 	}
 }
 
-func postAccountHandler(repo *repository.Repo) gin.HandlerFunc {
+func (ah *accountHandler) postAccountHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var data types.AccountPostData
 		if err := c.ShouldBindJSON(&data); err != nil {
@@ -190,7 +200,7 @@ func postAccountHandler(repo *repository.Repo) gin.HandlerFunc {
 		if data.Role == "" {
 			data.Role = "User"
 		}
-		if err := repo.SaveAccount(&data); err != nil {
+		if err := ah.repo.SaveAccount(&data); err != nil {
 			status := http.StatusBadRequest
 			if errors.Is(err, errDefs.ErrDoesExist) {
 				status = http.StatusConflict
@@ -206,11 +216,11 @@ func postAccountHandler(repo *repository.Repo) gin.HandlerFunc {
 	}
 }
 
-func prepareAccount(route *gin.RouterGroup, repo *repository.Repo) {
-	route.GET("/all", repo.EnsureDatabaseIsOK(getAllAccountsHandler(repo)))
-	route.POST("/register", repo.EnsureDatabaseIsOK(postAccountHandler(repo)))
-	route.POST("/login", repo.EnsureDatabaseIsOK(loginHandler(repo)))
-	route.PATCH("/modify", repo.EnsureDatabaseIsOK(patchAccountHandler(repo)))
-	route.PATCH("/promote", repo.EnsureDatabaseIsOK(patchPromoteAccountHandler(repo)))
-	route.DELETE("/delete", repo.EnsureDatabaseIsOK(deleteAccountHandler(repo)))
+func (ah *accountHandler) prepareAccount(route *gin.RouterGroup) {
+	route.GET("/all", ah.repo.EnsureDatabaseIsOK(ah.getAllAccountsHandler()))
+	route.POST("/register", ah.repo.EnsureDatabaseIsOK(ah.postAccountHandler()))
+	route.POST("/login", ah.repo.EnsureDatabaseIsOK(ah.loginHandler()))
+	route.PATCH("/modify", ah.repo.EnsureDatabaseIsOK(ah.patchAccountHandler()))
+	route.PATCH("/promote", ah.repo.EnsureDatabaseIsOK(ah.patchPromoteAccountHandler()))
+	route.DELETE("/delete", ah.repo.EnsureDatabaseIsOK(ah.deleteAccountHandler()))
 }

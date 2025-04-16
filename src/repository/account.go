@@ -8,8 +8,22 @@ import (
 	"tick_test/types"
 	errDefs "tick_test/utils/errDefs"
 
+	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 )
+
+type AccountRepository interface {
+	EnsureDatabaseIsOK(fn func(*gin.Context)) func(c *gin.Context)
+	UserExists(username string) (exists bool, err error)
+	ConfirmAccount(username string, password string) (err error)
+	FindAllAccounts() (data []types.AccountGetData, err error)
+	ConfirmNoAdmins() (adminCount int, err error)
+	SaveAccount(obj *types.AccountPostData) (err error)
+	DeleteAccount(username string) error
+	UpdateExistingAccount(username string, obj *types.AccountPatchData) (err error)
+	PromoteExistingAccount(obj *types.AccountPatchPromoteData) (err error)
+	FindUserRole(username string) (string, error)
+}
 
 func validateCredential(cred string, credName string) (err error) {
 	if strings.ContainsAny(cred, "\r\n\x00") {
@@ -29,28 +43,6 @@ func hashPassword(password string) (string, error) {
 func confirmPassword(password string, hash string) (err error) {
 	err = bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
 	return
-}
-
-type accountRepository interface {
-	UserExists(username string) (exists bool, err error)
-	ConfirmAccount(username string, password string) (err error)
-	FindAllAccounts() (data []types.AccountGetData, err error)
-	ConfirmNoAdmins() (adminCount int, err error)
-	SaveAccount(obj *types.AccountPostData) (err error)
-	DeleteAccount(username string) error
-	UpdateExistingAccount(username string, obj *types.AccountPatchData) (err error)
-	PromoteExistingAccount(obj *types.AccountPatchPromoteData) (err error)
-	FindUserRole(username string) (string, error)
-}
-
-type AccountHandler struct {
-	AccountRepository accountRepository
-}
-
-func NewAccountHandler(accountRepo accountRepository) (res *AccountHandler) {
-	return &AccountHandler{
-		AccountRepository: accountRepo,
-	}
 }
 
 func (r *Repo) UserExists(username string) (exists bool, err error) {

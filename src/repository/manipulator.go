@@ -8,9 +8,13 @@ import (
 	"sync"
 	"tick_test/types"
 	"time"
+
+	"github.com/gin-gonic/gin"
 )
 
-type manipulatorRepository interface {
+type ManipulatorRepository interface {
+	EnsureDatabaseIsOK(fn func(*gin.Context)) func(c *gin.Context)
+	IsDatabaseEnabled() bool
 	ApplyUpdateToIterationManipulator(data UpdateIterationManipulatorData, v *IterationManipulator) (dur time.Duration, err error)
 	LoadIterationManipulatorsFromFile() error
 	SaveIterationManipulators() error
@@ -19,16 +23,6 @@ type manipulatorRepository interface {
 	SaveIterationManipulatorToDatabase(obj *IterationManipulator) (err error)
 	UpdateManipulatorInDatabase(code string, duration types.ISO8601Duration, value int) error
 	DeleteManipulatorFromDatabase(code string) error
-}
-
-type ManipulatorHandler struct {
-	ManipulatorRepository manipulatorRepository
-}
-
-func NewManipulatorHandler(manipulatorRepo manipulatorRepository) (res *ManipulatorHandler) {
-	return &ManipulatorHandler{
-		ManipulatorRepository: manipulatorRepo,
-	}
 }
 
 const iterationManipulatorFile = "../.data/IterationManipulators.json"

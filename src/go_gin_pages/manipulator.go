@@ -11,13 +11,23 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func findAllIterationManipulatorsHandler(repo *repository.Repo) gin.HandlerFunc {
+type manipulatorHandler struct {
+	repo repository.ManipulatorRepository
+}
+
+func NewManipulatorHandler(manipulatorRepo repository.ManipulatorRepository) (res *manipulatorHandler) {
+	return &manipulatorHandler{
+		repo: manipulatorRepo,
+	}
+}
+
+func (mh *manipulatorHandler) findAllIterationManipulatorsHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		c.JSON(http.StatusOK, repository.IterationManipulators)
 	}
 }
 
-func findIterationManipulatorByCodeHandler(repo *repository.Repo) gin.HandlerFunc {
+func (mh *manipulatorHandler) findIterationManipulatorByCodeHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		code := c.Param("code")
 		for _, v := range repository.IterationManipulators {
@@ -30,7 +40,7 @@ func findIterationManipulatorByCodeHandler(repo *repository.Repo) gin.HandlerFun
 	}
 }
 
-func createIterationManipulatorHandler(repo *repository.Repo) gin.HandlerFunc {
+func (mh *manipulatorHandler) createIterationManipulatorHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var data repository.ManipulateIterationData
 		if err := c.ShouldBindJSON(&data); err != nil {
@@ -71,7 +81,7 @@ func createIterationManipulatorHandler(repo *repository.Repo) gin.HandlerFunc {
 		}
 		repository.IterationManipulatorMutex.Unlock()
 
-		err = repo.SaveIterationManipulatorToDatabase(&iterationManipulator)
+		err = mh.repo.SaveIterationManipulatorToDatabase(&iterationManipulator)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 			return
@@ -86,7 +96,7 @@ func createIterationManipulatorHandler(repo *repository.Repo) gin.HandlerFunc {
 	}
 }
 
-func updateIterationManipulatorHandler(repo *repository.Repo) gin.HandlerFunc {
+func (mh *manipulatorHandler) updateIterationManipulatorHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		code := c.Param("code")
 		var data repository.UpdateIterationManipulatorData
@@ -96,7 +106,7 @@ func updateIterationManipulatorHandler(repo *repository.Repo) gin.HandlerFunc {
 		}
 		for _, v := range repository.IterationManipulators {
 			if v.Code == code {
-				_, err := repo.ApplyUpdateToIterationManipulator(data, v)
+				_, err := mh.repo.ApplyUpdateToIterationManipulator(data, v)
 				if err != nil {
 					c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
 					return
@@ -109,14 +119,14 @@ func updateIterationManipulatorHandler(repo *repository.Repo) gin.HandlerFunc {
 	}
 }
 
-func deleteIterationManipulatorHandler(repo *repository.Repo) gin.HandlerFunc {
+func (mh *manipulatorHandler) deleteIterationManipulatorHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		code := c.Param("code")
 
-		if !repo.IsDatabaseEnabled() {
-			defer repo.SaveIterationManipulators()
+		if !mh.repo.IsDatabaseEnabled() {
+			defer mh.repo.SaveIterationManipulators()
 		} else {
-			err := repo.DeleteManipulatorFromDatabase(code)
+			err := mh.repo.DeleteManipulatorFromDatabase(code)
 			if err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 				return
@@ -137,10 +147,10 @@ func deleteIterationManipulatorHandler(repo *repository.Repo) gin.HandlerFunc {
 	}
 }
 
-func prepareManipulator(route *gin.RouterGroup, repo *repository.Repo) {
-	route.GET("", findAllIterationManipulatorsHandler(repo))
-	route.GET("/code/:code", findIterationManipulatorByCodeHandler(repo))
-	route.POST("", createIterationManipulatorHandler(repo))
-	route.PATCH("/code/:code", updateIterationManipulatorHandler(repo))
-	route.DELETE("/code/:code", deleteIterationManipulatorHandler(repo))
+func (mh *manipulatorHandler) prepareManipulator(route *gin.RouterGroup) {
+	route.GET("", mh.findAllIterationManipulatorsHandler())
+	route.GET("/code/:code", mh.findIterationManipulatorByCodeHandler())
+	route.POST("", mh.createIterationManipulatorHandler())
+	route.PATCH("/code/:code", mh.updateIterationManipulatorHandler())
+	route.DELETE("/code/:code", mh.deleteIterationManipulatorHandler())
 }

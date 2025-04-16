@@ -4,25 +4,18 @@ import (
 	"fmt"
 	"tick_test/types"
 	errDefs "tick_test/utils/errDefs"
+
+	"github.com/gin-gonic/gin"
 )
 
-type bookRepository interface {
+type BookRepository interface {
+	EnsureDatabaseIsOK(fn func(*gin.Context)) func(c *gin.Context)
 	FindAllBooks() (books []types.Book, err error)
 	FindPaginatedBooks(pageSize int, pageNumber int) (books []types.Book, err error)
-	FindBookByCode(code string) (book types.Book, err error) 
-	CreateBook(book *types.Book) (err error) 
+	FindBookByCode(code string) (book types.Book, err error)
+	CreateBook(book *types.Book) (err error)
 	UpdateBookByCode(code string, updates types.Book) (book types.Book, err error)
 	RemoveBookByCode(code string) (n int64, err error)
-}
-
-type BookHandler struct {
-	BookRepository bookRepository
-}
-
-func NewBookHandler(bookRepo bookRepository) (res *BookHandler) {
-	return &BookHandler{
-		BookRepository: bookRepo,
-	}
 }
 
 func (r *Repo) FindAllBooks() (books []types.Book, err error) {

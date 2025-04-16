@@ -11,7 +11,18 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func sendMessageHandler(repo *repository.Repo) gin.HandlerFunc {
+type messageHandler struct {
+	repo           repository.MessageRepository
+	accountHandler *accountHandler
+}
+
+func NewMessageHandler(messageRepo repository.MessageRepository) (res *messageHandler) {
+	return &messageHandler{
+		repo: messageRepo,
+	}
+}
+
+func (mh *messageHandler) sendMessageHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var data types.MessageToSend
 		if err := c.ShouldBindJSON(&data); err != nil {
@@ -19,7 +30,7 @@ func sendMessageHandler(repo *repository.Repo) gin.HandlerFunc {
 			return
 		}
 
-		username, err := confirmUserFromGinContext(c, repo)
+		username, err := mh.accountHandler.confirmUserFromGinContext(c)
 		if err != nil {
 			c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": "user authentication failed; " + err.Error()})
 			return
@@ -28,7 +39,7 @@ func sendMessageHandler(repo *repository.Repo) gin.HandlerFunc {
 		data.Message.From = username
 		data.Message.When = types.ISO8601Date(time.Now().UTC().Format(time.RFC3339))
 
-		if err := repo.SaveMessage(&data.Message); err != nil {
+		if err := mh.repo.SaveMessage(&data.Message); err != nil {
 			c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": err.Error()})
 			return
 		}
@@ -37,15 +48,15 @@ func sendMessageHandler(repo *repository.Repo) gin.HandlerFunc {
 	}
 }
 
-func getMessagesHandler(repo *repository.Repo) gin.HandlerFunc {
+func (mh *messageHandler) getMessagesHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		username, err := confirmUserFromGinContext(c, repo)
+		username, err := mh.accountHandler.confirmUserFromGinContext(c)
 		if err != nil {
 			c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": "user authentication failed; " + err.Error()})
 			return
 		}
 
-		msgs, err := repo.FindMessages(username, true, true)
+		msgs, err := mh.repo.FindMessages(username, true, true)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 			return
@@ -55,15 +66,15 @@ func getMessagesHandler(repo *repository.Repo) gin.HandlerFunc {
 	}
 }
 
-func getSentMessagesHandler(repo *repository.Repo) gin.HandlerFunc {
+func (mh *messageHandler) getSentMessagesHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		username, err := confirmUserFromGinContext(c, repo)
+		username, err := mh.accountHandler.confirmUserFromGinContext(c)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"Error": "user authentication failed; " + err.Error()})
 			return
 		}
 
-		msgs, err := repo.FindMessages(username, true, false)
+		msgs, err := mh.repo.FindMessages(username, true, false)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 			return
@@ -73,15 +84,15 @@ func getSentMessagesHandler(repo *repository.Repo) gin.HandlerFunc {
 	}
 }
 
-func getReceivedMessagesHandler(repo *repository.Repo) gin.HandlerFunc {
+func (mh *messageHandler) getReceivedMessagesHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		username, err := confirmUserFromGinContext(c, repo)
+		username, err := mh.accountHandler.confirmUserFromGinContext(c)
 		if err != nil {
 			c.JSON(http.StatusUnauthorized, gin.H{"Error": "user authentication failed; " + err.Error()})
 			return
 		}
 
-		msgs, err := repo.FindMessages(username, false, true)
+		msgs, err := mh.repo.FindMessages(username, false, true)
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
 			return
@@ -91,9 +102,9 @@ func getReceivedMessagesHandler(repo *repository.Repo) gin.HandlerFunc {
 	}
 }
 
-func prepareMessage(route *gin.RouterGroup, repo *repository.Repo) {
-	route.POST("/send", repo.EnsureDatabaseIsOK(sendMessageHandler(repo)))
-	route.GET("/user", repo.EnsureDatabaseIsOK(getMessagesHandler(repo)))
-	route.GET("/sent-by", repo.EnsureDatabaseIsOK(getSentMessagesHandler(repo)))
-	route.GET("/recv-by", repo.EnsureDatabaseIsOK(getReceivedMessagesHandler(repo)))
+func (mh *messageHandler) prepareMessage(route *gin.RouterGroup) {
+	route.POST("/send", mh.repo.EnsureDatabaseIsOK(mh.sendMessageHandler()))
+	route.GET("/user", mh.repo.EnsureDatabaseIsOK(mh.getMessagesHandler()))
+	route.GET("/sent-by", mh.repo.EnsureDatabaseIsOK(mh.getSentMessagesHandler()))
+	route.GET("/recv-by", mh.repo.EnsureDatabaseIsOK(mh.getReceivedMessagesHandler()))
 }
