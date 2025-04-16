@@ -18,7 +18,7 @@ type BookRepository interface {
 	RemoveBookByCode(code string) (n int64, err error)
 }
 
-func (r *Repo) FindAllBooks() (books []types.Book, err error) {
+func (r *repo) FindAllBooks() (books []types.Book, err error) {
 	if r.DB.Conn == nil {
 		err = errDefs.ErrDatabaseOffline
 		return
@@ -41,7 +41,7 @@ func (r *Repo) FindAllBooks() (books []types.Book, err error) {
 	return books, nil
 }
 
-func (r *Repo) FindPaginatedBooks(pageSize int, pageNumber int) (books []types.Book, err error) {
+func (r *repo) FindPaginatedBooks(pageSize int, pageNumber int) (books []types.Book, err error) {
 	if r.DB.Conn == nil {
 		err = errDefs.ErrDatabaseOffline
 		return
@@ -67,7 +67,7 @@ func (r *Repo) FindPaginatedBooks(pageSize int, pageNumber int) (books []types.B
 	return books, nil
 }
 
-func (r *Repo) FindBookByCode(code string) (book types.Book, err error) {
+func (r *repo) FindBookByCode(code string) (book types.Book, err error) {
 	if r.DB.Conn == nil {
 		err = errDefs.ErrDatabaseOffline
 		return
@@ -83,7 +83,7 @@ func (r *Repo) FindBookByCode(code string) (book types.Book, err error) {
 	return book, nil
 }
 
-func (r *Repo) CreateBook(book *types.Book) (err error) {
+func (r *repo) CreateBook(book *types.Book) (err error) {
 	if r.DB.Conn == nil {
 		err = errDefs.ErrDatabaseOffline
 		return
@@ -95,7 +95,7 @@ func (r *Repo) CreateBook(book *types.Book) (err error) {
 	return err
 }
 
-func (r *Repo) UpdateBookByCode(code string, updates types.Book) (book types.Book, err error) {
+func (r *repo) UpdateBookByCode(code string, updates types.Book) (book types.Book, err error) {
 	if r.DB.Conn == nil {
 		err = errDefs.ErrDatabaseOffline
 		return
@@ -139,7 +139,7 @@ func (r *Repo) UpdateBookByCode(code string, updates types.Book) (book types.Boo
 	return updatedBook, nil
 }
 
-func (r *Repo) RemoveBookByCode(code string) (n int64, err error) {
+func (r *repo) RemoveBookByCode(code string) (n int64, err error) {
 	if r.DB.Conn == nil {
 		err = errDefs.ErrDatabaseOffline
 		return
@@ -155,7 +155,7 @@ func (r *Repo) RemoveBookByCode(code string) (n int64, err error) {
 	return rowsAffected, nil
 }
 
-func (r *Repo) doPostgresPreparationForBook() {
+func (r *repo) doPostgresPreparationForBook() {
 	if r.DB.Conn != nil {
 		result, err := r.DB.Conn.Exec(`
 			CREATE TABLE IF NOT EXISTS book (

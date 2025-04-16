@@ -60,7 +60,7 @@ func UseConfigToDetermineURL(cfg *config.Config) (url string) {
 	return net.JoinHostPort(cfg.BaseURL, cfg.Port)
 }
 
-func Prepare(engine *gin.Engine, url string, repo *repository.Repo) {
+func Prepare(engine *gin.Engine, url string, repo repository.Repository) {
 	cmw := &corsMiddleware{
 		origin: url,
 	}

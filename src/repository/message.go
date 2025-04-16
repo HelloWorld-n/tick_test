@@ -14,7 +14,7 @@ type MessageRepository interface {
 	FindMessages(username string, sent bool, recv bool) (msgs []types.Message, err error)
 }
 
-func (r *Repo) SaveMessage(msg *types.Message) error {
+func (r *repo) SaveMessage(msg *types.Message) error {
 	if r.DB.Conn == nil {
 		return errDefs.ErrDatabaseOffline
 	}
@@ -23,7 +23,7 @@ func (r *Repo) SaveMessage(msg *types.Message) error {
 	return err
 }
 
-func (r *Repo) FindMessages(username string, sent bool, recv bool) (msgs []types.Message, err error) {
+func (r *repo) FindMessages(username string, sent bool, recv bool) (msgs []types.Message, err error) {
 	if r.DB.Conn == nil {
 		return nil, errDefs.ErrDatabaseOffline
 	}
@@ -57,7 +57,7 @@ func (r *Repo) FindMessages(username string, sent bool, recv bool) (msgs []types
 	return msgs, nil
 }
 
-func (r *Repo) doPostgresPreparationForMessages() {
+func (r *repo) doPostgresPreparationForMessages() {
 	if r.DB.Conn != nil {
 		result, err := r.DB.Conn.Exec(`
 			CREATE TABLE IF NOT EXISTS messages (

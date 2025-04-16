@@ -28,11 +28,11 @@ type ResultIndex struct {
 var Iteration int
 var IterationMutex sync.Mutex
 
-func (r *Repo) IsDatabaseEnabled() bool {
+func (r *repo) IsDatabaseEnabled() bool {
 	return r.DB.Conn != nil
 }
 
-func (r *Repo) DoPostgresPreparation() (db *sql.DB, err error) {
+func (r *repo) DoPostgresPreparation() (db *sql.DB, err error) {
 	databasePath, err := LoadDatabasePath()
 	if err != nil {
 		return
@@ -55,7 +55,7 @@ func (r *Repo) DoPostgresPreparation() (db *sql.DB, err error) {
 	return
 }
 
-func (r *Repo) EnsureDatabaseIsOK(fn func(*gin.Context)) func(c *gin.Context) {
+func (r *repo) EnsureDatabaseIsOK(fn func(*gin.Context)) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		if r.DB.Conn == nil {
 			c.JSON(

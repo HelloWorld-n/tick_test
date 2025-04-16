@@ -11,7 +11,7 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func setupRepository() (repo *repository.Repo, err error) {
+func setupRepository() (repo repository.Repository, err error) {
 	dbPath, err := repository.LoadDatabasePath()
 	if err != nil {
 		return nil, fmt.Errorf("could not load database path: %w", err)

@@ -45,7 +45,7 @@ func confirmPassword(password string, hash string) (err error) {
 	return
 }
 
-func (r *Repo) UserExists(username string) (exists bool, err error) {
+func (r *repo) UserExists(username string) (exists bool, err error) {
 	query := `SELECT EXISTS(SELECT 1 FROM account WHERE username = $1);`
 	err = r.DB.Conn.QueryRow(query, username).Scan(&exists)
 	if err != nil {
@@ -54,7 +54,7 @@ func (r *Repo) UserExists(username string) (exists bool, err error) {
 	return exists, nil
 }
 
-func (r *Repo) ConfirmAccount(username string, password string) (err error) {
+func (r *repo) ConfirmAccount(username string, password string) (err error) {
 	query := `SELECT password FROM account WHERE $1 = username`
 
 	rows, err := r.DB.Conn.Query(query, username)
@@ -79,7 +79,7 @@ func (r *Repo) ConfirmAccount(username string, password string) (err error) {
 	return
 }
 
-func (r *Repo) FindAllAccounts() (data []types.AccountGetData, err error) {
+func (r *repo) FindAllAccounts() (data []types.AccountGetData, err error) {
 	query := `
 		SELECT 
 			username, 
@@ -109,7 +109,7 @@ func (r *Repo) FindAllAccounts() (data []types.AccountGetData, err error) {
 	return data, nil
 }
 
-func (r *Repo) ConfirmNoAdmins() (adminCount int, err error) {
+func (r *repo) ConfirmNoAdmins() (adminCount int, err error) {
 	adminQuery := `
 		SELECT COUNT(*) 
 		FROM account a
@@ -126,7 +126,7 @@ func (r *Repo) ConfirmNoAdmins() (adminCount int, err error) {
 	return
 }
 
-func (r *Repo) SaveAccount(obj *types.AccountPostData) (err error) {
+func (r *repo) SaveAccount(obj *types.AccountPostData) (err error) {
 	if err = validateCredential(obj.Username, "Username"); err != nil {
 		return
 	}
@@ -170,7 +170,7 @@ func (r *Repo) SaveAccount(obj *types.AccountPostData) (err error) {
 	return
 }
 
-func (r *Repo) DeleteAccount(username string) error {
+func (r *repo) DeleteAccount(username string) error {
 	_, err := r.DB.Conn.Exec(`DELETE FROM account WHERE username = $1`, username)
 	if err != nil {
 		return fmt.Errorf("error deleting account: %w", err)
@@ -178,7 +178,7 @@ func (r *Repo) DeleteAccount(username string) error {
 	return nil
 }
 
-func (r *Repo) UpdateExistingAccount(username string, obj *types.AccountPatchData) (err error) {
+func (r *repo) UpdateExistingAccount(username string, obj *types.AccountPatchData) (err error) {
 	// verify valid input
 	if err = validateCredential(obj.Username, "Username"); err != nil {
 		return
@@ -221,7 +221,7 @@ func (r *Repo) UpdateExistingAccount(username string, obj *types.AccountPatchDat
 	return
 }
 
-func (r *Repo) PromoteExistingAccount(obj *types.AccountPatchPromoteData) (err error) {
+func (r *repo) PromoteExistingAccount(obj *types.AccountPatchPromoteData) (err error) {
 	// verify valid input
 	var count int
 	err = r.DB.Conn.QueryRow(`SELECT COUNT(*) FROM account WHERE username = $1`, obj.Username).Scan(&count)
@@ -242,7 +242,7 @@ func (r *Repo) PromoteExistingAccount(obj *types.AccountPatchPromoteData) (err e
 	return
 }
 
-func (r *Repo) FindUserRole(username string) (string, error) {
+func (r *repo) FindUserRole(username string) (string, error) {
 	var role string
 	query := `
 		SELECT r.name 
@@ -257,7 +257,7 @@ func (r *Repo) FindUserRole(username string) (string, error) {
 	return role, nil
 }
 
-func (r *Repo) doPostgresPreparationForAccount() {
+func (r *repo) doPostgresPreparationForAccount() {
 	if r.DB.Conn != nil {
 		result, err := r.DB.Conn.Exec(`
 			CREATE TABLE IF NOT EXISTS account (
