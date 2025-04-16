@@ -47,7 +47,7 @@ type AccountHandler struct {
 	AccountRepository accountRepository
 }
 
-func NewAccountsHandler(accountRepo accountRepository) (res *AccountHandler) {
+func NewAccountHandler(accountRepo accountRepository) (res *AccountHandler) {
 	return &AccountHandler{
 		AccountRepository: accountRepo,
 	}
