@@ -7,7 +7,7 @@ import (
 )
 
 var ErrInternalServerError = errors.New("internal server error")
-var ErrConflict = errors.New("comflict")
+var ErrConflict = errors.New("conflict")
 var ErrDatabaseOffline = fmt.Errorf("%w: database offline", ErrInternalServerError)
 var ErrDoesExist = fmt.Errorf("%w: item already exists", ErrConflict)
 var ErrBadRequest = errors.New("bad request")

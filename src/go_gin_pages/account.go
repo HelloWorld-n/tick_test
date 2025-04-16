@@ -34,7 +34,7 @@ func patchPromoteAccount(c *gin.Context) {
 		return
 	}
 	if err != nil {
-		c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": err.Error()})
+		returnError(c, err)
 		return
 	}
 
@@ -60,7 +60,7 @@ func patchAccount(c *gin.Context) {
 	}
 	err = repository.UpdateExistingAccount(username, data)
 	if err != nil {
-		c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": err.Error()})
+		returnError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, nil)
@@ -71,7 +71,7 @@ func deleteAccount(c *gin.Context) {
 
 	exists, err := repository.UserExists(username)
 	if err != nil {
-		c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": err.Error()})
+		returnError(c, err)
 		return
 	}
 	if !exists {
@@ -81,11 +81,11 @@ func deleteAccount(c *gin.Context) {
 
 	username, err = confirmUserFromGinContext(c)
 	if err != nil {
-		c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": err.Error()})
+		returnError(c, err)
 		return
 	}
 	if err := repository.DeleteAccount(username); err != nil {
-		c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": err.Error()})
+		returnError(c, err)
 		return
 	}
 	c.JSON(http.StatusAccepted, nil)
@@ -152,7 +152,7 @@ func login(c *gin.Context) {
 	username := c.GetHeader("Username")
 	password := c.GetHeader("Password")
 	if err := repository.ConfirmAccount(username, password); err != nil {
-		c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": err.Error()})
+		returnError(c, err)
 		return
 	} else {
 		token := generateToken(username)
@@ -163,7 +163,7 @@ func login(c *gin.Context) {
 func getAllAccounts(c *gin.Context) {
 	accounts, err := repository.FindAllAccounts()
 	if err != nil {
-		c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": err.Error()})
+		returnError(c, err)
 		return
 	}
 	c.JSON(http.StatusOK, accounts)

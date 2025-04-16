@@ -17,6 +17,10 @@ import (
 
 const urlFile = "../.config/url.txt"
 
+func returnError(c *gin.Context, err error) {
+	returnError(c, err)
+}
+
 func index(c *gin.Context) {
 	if err := repository.LoadIteration(); err != nil {
 		c.JSON(

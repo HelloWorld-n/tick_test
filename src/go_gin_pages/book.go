@@ -86,7 +86,7 @@ func postBook(c *gin.Context) {
 	}
 
 	if err := repository.CreateBook(&book); err != nil {
-		c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": "code already exists"})
+		returnError(c, fmt.Errorf("%w: code already exists", err))
 		return
 	}
 
@@ -114,7 +114,7 @@ func patchBook(c *gin.Context) {
 
 	updatedBook, err := repository.UpdateBookByCode(code, updates)
 	if err != nil {
-		c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": err.Error()})
+		returnError(c, err)
 		return
 	}
 
@@ -126,7 +126,7 @@ func deleteBook(c *gin.Context) {
 
 	rowsAffected, err := repository.RemoveBookByCode(code)
 	if err != nil {
-		c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": err.Error()})
+		returnError(c, err)
 		return
 	}
 
@@ -141,14 +141,14 @@ func RoleRequirer(handler gin.HandlerFunc, roles []string) (fn func(c *gin.Conte
 	return func(c *gin.Context) {
 		username, err := confirmUserFromGinContext(c)
 		if err != nil {
-			c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": err.Error()})
+			returnError(c, err)
 			c.Abort()
 			return
 		}
 
 		userRole, err := repository.FindUserRole(username)
 		if err != nil {
-			c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": "failed to retrieve user role"})
+			returnError(c, fmt.Errorf("%w:failed to retrive user role", err))
 			c.Abort()
 			return
 		}
