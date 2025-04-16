@@ -10,6 +10,27 @@ import (
 	"time"
 )
 
+type manipulatorRepository interface {
+	ApplyUpdateToIterationManipulator(data UpdateIterationManipulatorData, v *IterationManipulator) (dur time.Duration, err error)
+	LoadIterationManipulatorsFromFile() error
+	SaveIterationManipulators() error
+	ReadManipulatorsFromFile() ([]*IterationManipulator, error)
+	LoadIterationManipulatorsFromDatabase() error
+	SaveIterationManipulatorToDatabase(obj *IterationManipulator) (err error)
+	UpdateManipulatorInDatabase(code string, duration types.ISO8601Duration, value int) error
+	DeleteManipulatorFromDatabase(code string) error
+}
+
+type ManipulatorHandler struct {
+	ManipulatorRepository manipulatorRepository
+}
+
+func NewManipulatorHandler(manipulatorRepo manipulatorRepository) (res *ManipulatorHandler) {
+	return &ManipulatorHandler{
+		ManipulatorRepository: manipulatorRepo,
+	}
+}
+
 const iterationManipulatorFile = "../.data/IterationManipulators.json"
 
 type IterationManipulator struct {

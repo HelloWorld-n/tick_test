@@ -6,6 +6,21 @@ import (
 	"tick_test/utils/errDefs"
 )
 
+type messageRepository interface {
+	SaveMessage(msg *types.Message)
+	FindMessages(username string, sent bool, recv bool) (msgs []types.Message, err error)
+}
+
+type MessageHandler struct {
+	MessageRepository messageRepository
+}
+
+func NewMessageHandler(messageRepo messageRepository) (res *MessageHandler) {
+	return &MessageHandler{
+		MessageRepository: messageRepo,
+	}
+}
+
 func (r *Repo) SaveMessage(msg *types.Message) error {
 	if r.DB.Conn == nil {
 		return errDefs.ErrDatabaseOffline
