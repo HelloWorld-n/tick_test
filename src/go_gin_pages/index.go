@@ -11,6 +11,7 @@ import (
 
 	"tick_test/internal/config"
 	"tick_test/repository"
+	"tick_test/utils/errDefs"
 
 	"github.com/gin-gonic/gin"
 )
@@ -18,7 +19,7 @@ import (
 const urlFile = "../.config/url.txt"
 
 func returnError(c *gin.Context, err error) {
-	returnError(c, err)
+	c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": err.Error()})
 }
 
 func index(c *gin.Context) {
