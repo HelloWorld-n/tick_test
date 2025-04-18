@@ -1,6 +1,7 @@
 package go_gin_pages
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
@@ -26,13 +27,13 @@ func (mh *messageHandler) sendMessageHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var data types.MessageToSend
 		if err := c.ShouldBindJSON(&data); err != nil {
-      returnError(c, fmt.Errorf("%w: %v", errDefs.ErrStatusBadRequest, err.Error()))
+			returnError(c, fmt.Errorf("%w: %v", errDefs.ErrBadRequest, err.Error()))
 			return
 		}
 
 		username, err := mh.accountHandler.confirmUserFromGinContext(c)
 		if err != nil {
-      returnError(c, err)
+			returnError(c, err)
 			return
 		}
 
@@ -40,7 +41,7 @@ func (mh *messageHandler) sendMessageHandler() gin.HandlerFunc {
 		data.Message.When = types.ISO8601Date(time.Now().UTC().Format(time.RFC3339))
 
 		if err := mh.repo.SaveMessage(&data.Message); err != nil {
-      returnError(c, err)
+			returnError(c, err)
 			return
 		}
 
@@ -52,13 +53,13 @@ func (mh *messageHandler) getMessagesHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		username, err := mh.accountHandler.confirmUserFromGinContext(c)
 		if err != nil {
-      returnError(c, err)
+			returnError(c, err)
 			return
 		}
 
 		msgs, err := mh.repo.FindMessages(username, true, true)
 		if err != nil {
-      returnError(c, err)
+			returnError(c, err)
 			return
 		}
 
@@ -70,13 +71,13 @@ func (mh *messageHandler) getSentMessagesHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		username, err := mh.accountHandler.confirmUserFromGinContext(c)
 		if err != nil {
-      returnError(c, err)
+			returnError(c, err)
 			return
 		}
 
 		msgs, err := mh.repo.FindMessages(username, true, false)
 		if err != nil {
-      returnError(c, err)
+			returnError(c, err)
 			return
 		}
 
@@ -88,13 +89,13 @@ func (mh *messageHandler) getReceivedMessagesHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		username, err := mh.accountHandler.confirmUserFromGinContext(c)
 		if err != nil {
-      returnError(c, err)
+			returnError(c, err)
 			return
 		}
 
 		msgs, err := mh.repo.FindMessages(username, false, true)
 		if err != nil {
-      returnError(c, err)
+			returnError(c, err)
 			return
 		}
 
