@@ -27,7 +27,7 @@ func index(c *gin.Context) {
 		c.JSON(
 			http.StatusInternalServerError,
 			gin.H{
-				"Error": fmt.Sprintf("Failed to load iteration: %v", err),
+				"error": fmt.Sprintf("Failed to load iteration: %v", err),
 			},
 		)
 		return

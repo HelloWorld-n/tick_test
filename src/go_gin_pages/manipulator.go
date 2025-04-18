@@ -79,6 +79,7 @@ func (mh *manipulatorHandler) createIterationManipulatorHandler() gin.HandlerFun
 			}
 			iterationManipulator.Code = random.RandSeq(80)
 		}
+
 		repository.IterationManipulatorMutex.Unlock()
 
 		err = mh.repo.SaveIterationManipulatorToDatabase(&iterationManipulator)
@@ -128,7 +129,7 @@ func (mh *manipulatorHandler) deleteIterationManipulatorHandler() gin.HandlerFun
 		} else {
 			err := mh.repo.DeleteManipulatorFromDatabase(code)
 			if err != nil {
-				c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+        returnError(c, err)
 				return
 			}
 		}

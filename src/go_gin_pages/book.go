@@ -136,7 +136,6 @@ func (bh *bookHandler) patchBookHandler() gin.HandlerFunc {
 			return
 		}
 
-
 		c.JSON(http.StatusOK, updatedBook)
 	}
 }
@@ -147,7 +146,7 @@ func (bh *bookHandler) deleteBookHandler() gin.HandlerFunc {
 		code := c.Param("code")
 		rowsAffected, err := bh.repo.RemoveBookByCode(code)
 		if err != nil {
-			c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": err.Error()})
+      returnError(c, err)
 			return
 		}
 
@@ -185,8 +184,8 @@ func (bh *bookHandler) RoleRequirer(handler gin.HandlerFunc, roles []string) fun
 
 		if !authorized {
 			c.JSON(http.StatusForbidden, gin.H{
-				"Error":      "user does not have the required role",
-				"ValidRoles": roles,
+				"error":      "user does not have the required role",
+				"validRoles": roles,
 			})
 			c.Abort()
 			return

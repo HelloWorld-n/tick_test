@@ -39,9 +39,7 @@ func (ah *accountHandler) patchPromoteAccountHandler() gin.HandlerFunc {
 		// verify privileges
 		_, role, err := ah.confirmAccountFromGinContext(c)
 		if role != "Admin" {
-			c.JSON(http.StatusUnauthorized, gin.H{
-				"Error": fmt.Errorf("%w: only admin can modify roles", errDefs.ErrUnauthorized),
-			})
+      returnError(c, fmt.Errorf("%w: only admin can modify roles", errDefs.ErrUnauthorized))
 			return
 		}
 		if err != nil {
@@ -49,11 +47,10 @@ func (ah *accountHandler) patchPromoteAccountHandler() gin.HandlerFunc {
 			return
 		}
 
-
 		// apply changes
 		var data = new(types.AccountPatchPromoteData)
 		if err := c.ShouldBindJSON(data); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+      returnError(c, err)
 			return
 		}
 		ah.repo.PromoteExistingAccount(data)
@@ -65,17 +62,17 @@ func (ah *accountHandler) patchAccountHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		username, err := ah.confirmUserFromGinContext(c)
 		if err != nil {
-			c.JSON(http.StatusUnauthorized, gin.H{"Error": err.Error()})
+      returnError(c, err)
 			return
 		}
 		var data = new(types.AccountPatchData)
 		if err := c.ShouldBindJSON(data); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+      returnError(c, fmt.Errorf("%w: %v", errDefs.ErrStatusBadRequest, err.Error()))
 			return
 		}
 		err = ah.repo.UpdateExistingAccount(username, data)
 		if err != nil {
-			c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": err.Error()})
+      returnError(c, err)
 			return
 		}
 		c.JSON(http.StatusOK, nil)
@@ -88,7 +85,7 @@ func (ah *accountHandler) deleteAccountHandler() gin.HandlerFunc {
 
 		exists, err := ah.repo.UserExists(username)
 		if err != nil {
-			c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": err.Error()})
+      returnError(c, err)
 			return
 		}
 		if !exists {
@@ -98,11 +95,11 @@ func (ah *accountHandler) deleteAccountHandler() gin.HandlerFunc {
 
 		username, err = ah.confirmUserFromGinContext(c)
 		if err != nil {
-			c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": err.Error()})
+      returnError(c, err)
 			return
 		}
 		if err := ah.repo.DeleteAccount(username); err != nil {
-			c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": err.Error()})
+      returnError(c, err)
 			return
 		}
 		c.JSON(http.StatusAccepted, nil)
@@ -171,7 +168,7 @@ func (ah *accountHandler) loginHandler() gin.HandlerFunc {
 		username := c.GetHeader("Username")
 		password := c.GetHeader("Password")
 		if err := ah.repo.ConfirmAccount(username, password); err != nil {
-			c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": err.Error()})
+      returnError(c, err)
 			return
 		} else {
 			token := generateToken(username)
@@ -184,7 +181,7 @@ func (ah *accountHandler) getAllAccountsHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		accounts, err := ah.repo.FindAllAccounts()
 		if err != nil {
-			c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": err.Error()})
+      returnError(c, err)
 			return
 		}
 		c.JSON(http.StatusOK, accounts)
@@ -195,7 +192,7 @@ func (ah *accountHandler) postAccountHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var data types.AccountPostData
 		if err := c.ShouldBindJSON(&data); err != nil {
-			c.JSON(http.StatusBadRequest, gin.H{`Error`: err.Error()})
+      returnError(c, fmt.Errorf("%w: %v", errDefs.ErrStatusBadRequest, err.Error()))
 			return
 		}
 		if data.Role == "" {
@@ -206,7 +203,7 @@ func (ah *accountHandler) postAccountHandler() gin.HandlerFunc {
 			if errors.Is(err, errDefs.ErrDoesExist) {
 				status = http.StatusConflict
 			}
-			c.JSON(status, gin.H{`Error`: err.Error()})
+      returnError(c, err)
 			return
 		}
 
