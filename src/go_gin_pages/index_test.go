@@ -3,10 +3,12 @@ package go_gin_pages
 import (
 	"bytes"
 	"encoding/json"
+	"flag"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"tick_test/internal/config"
 )
 
 var url string
@@ -19,7 +21,12 @@ var adminCredentials struct {
 }
 
 func setupIndex() {
-	url, _ = DetermineURL()
+	configPath := flag.String("c", "config.yaml", "Path to config file")
+	cfg, err := config.GetConfig(*configPath)
+	if err != nil && !os.IsNotExist(err) {
+		panic(err)
+	}
+	url = UseConfigToDetermineURL(cfg)
 	client = &http.Client{}
 	adminCredentialsFile, err := os.Open(adminCredentialsPath)
 	if err != nil {

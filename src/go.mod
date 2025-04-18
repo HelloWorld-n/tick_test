@@ -2,7 +2,10 @@ module tick_test
 
 go 1.24
 
-require github.com/gin-gonic/gin v1.10.0
+require (
+	github.com/gin-gonic/gin v1.10.0
+	gopkg.in/yaml.v2 v2.4.0
+)
 
 require (
 	github.com/kr/pretty v0.3.0 // indirect

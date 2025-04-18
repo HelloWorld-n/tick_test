@@ -54,7 +54,7 @@ func accountCreator(accPos int, isSamePassword bool) (result func(t *testing.T))
 				Role:         accounts[accPos].Role,
 			},
 		)
-		req, err := http.NewRequest(http.MethodPost, "http://"+url+"/account/register", bytes.NewBuffer(body))
+		req, err := http.NewRequest(http.MethodPost, "http://"+url+"/v1/accounts/register", bytes.NewBuffer(body))
 		if err != nil {
 			t.Fatalf("failed to create request: %v", err)
 		}
@@ -93,7 +93,7 @@ func accountPatcher(accPos int, newPassword string, confirmNewPassword string) (
 			SamePassword: confirmNewPassword,
 		}
 		body, _ := json.Marshal(patchPayload)
-		req, err := http.NewRequest(http.MethodPatch, "http://"+url+"/account/modify", bytes.NewBuffer(body))
+		req, err := http.NewRequest(http.MethodPatch, "http://"+url+"/v1/accounts/modify", bytes.NewBuffer(body))
 		if err != nil {
 			t.Fatalf("failed to create patch request: %v", err)
 		}
@@ -116,7 +116,7 @@ func accountPatcher(accPos int, newPassword string, confirmNewPassword string) (
 
 func accountLogin(accPos int, isCorrectPassword bool) (token string, err error) {
 	body := []byte(`{}`)
-	req, err := http.NewRequest(http.MethodPost, "http://"+url+"/account/login", bytes.NewBuffer(body))
+	req, err := http.NewRequest(http.MethodPost, "http://"+url+"/v1/accounts/login", bytes.NewBuffer(body))
 	if err != nil {
 		return "", fmt.Errorf("failed to create login request: %v", err)
 	}
@@ -154,7 +154,7 @@ func accountLoginer(accPos int, isCorrectPassword bool) func(t *testing.T) {
 
 func accountDeleter(accPos int) (result func(t *testing.T)) {
 	return func(t *testing.T) {
-		req, err := http.NewRequest(http.MethodDelete, "http://"+url+"/account/delete", bytes.NewBuffer([]byte{}))
+		req, err := http.NewRequest(http.MethodDelete, "http://"+url+"/v1/accounts/delete", bytes.NewBuffer([]byte{}))
 		if err != nil {
 			t.Fatalf("failed to create request: %v", err)
 		}

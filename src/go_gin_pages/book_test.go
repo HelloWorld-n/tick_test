@@ -43,7 +43,7 @@ func bookCreator(title, author string) func(*testing.T) {
 		}
 		books = append(books, book)
 		body, _ := json.Marshal(book)
-		req, err := http.NewRequest(http.MethodPost, "http://"+url+"/book/create", bytes.NewBuffer(body))
+		req, err := http.NewRequest(http.MethodPost, "http://"+url+"/v1/books/create", bytes.NewBuffer(body))
 		if err != nil {
 			t.Fatalf("failed to create request: %v", err)
 		}
@@ -75,7 +75,7 @@ func bookCreator(title, author string) func(*testing.T) {
 
 func bookFetcher(book bookData) func(*testing.T) {
 	return func(t *testing.T) {
-		req, err := http.NewRequest(http.MethodGet, "http://"+url+"/book/code/"+book.Code, nil)
+		req, err := http.NewRequest(http.MethodGet, "http://"+url+"/v1/books/code/"+book.Code, nil)
 		if err != nil {
 			t.Fatalf("failed to create request: %v", err)
 		}
@@ -107,7 +107,7 @@ func bookUpdater(code, newTitle, newAuthor string) func(*testing.T) {
 			Author: newAuthor,
 		}
 		body, _ := json.Marshal(updates)
-		req, err := http.NewRequest(http.MethodPatch, "http://"+url+"/book/code/"+code, bytes.NewBuffer(body))
+		req, err := http.NewRequest(http.MethodPatch, "http://"+url+"/v1/books/code/"+code, bytes.NewBuffer(body))
 		if err != nil {
 			t.Fatalf("failed to create request: %v", err)
 		}
@@ -138,7 +138,7 @@ func bookUpdater(code, newTitle, newAuthor string) func(*testing.T) {
 
 func bookDeleter(code string) func(*testing.T) {
 	return func(t *testing.T) {
-		req, err := http.NewRequest(http.MethodDelete, "http://"+url+"/book/code/"+code, nil)
+		req, err := http.NewRequest(http.MethodDelete, "http://"+url+"/v1/books/code/"+code, nil)
 		if err != nil {
 			t.Fatalf("failed to create request: %v", err)
 		}
