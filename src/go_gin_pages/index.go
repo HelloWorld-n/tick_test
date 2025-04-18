@@ -113,4 +113,5 @@ func Prepare(engine *gin.Engine, url string, repo repository.Repository) {
 	accountHandler.prepareAccount(engine.Group("/account"))
 	messageHandler.prepareMessage(engine.Group("/message"))
 	bookHandler.prepareBook(engine.Group("/book"))
+
 }
