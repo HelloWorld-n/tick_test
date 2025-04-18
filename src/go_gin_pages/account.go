@@ -49,6 +49,7 @@ func (ah *accountHandler) patchPromoteAccountHandler() gin.HandlerFunc {
 			return
 		}
 
+
 		// apply changes
 		var data = new(types.AccountPatchPromoteData)
 		if err := c.ShouldBindJSON(data); err != nil {

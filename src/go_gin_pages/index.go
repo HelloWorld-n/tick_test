@@ -11,11 +11,16 @@ import (
 
 	"tick_test/internal/config"
 	"tick_test/repository"
+	"tick_test/utils/errDefs"
 
 	"github.com/gin-gonic/gin"
 )
 
 const urlFile = "../.config/url.txt"
+
+func returnError(c *gin.Context, err error) {
+	c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": err.Error()})
+}
 
 func index(c *gin.Context) {
 	if err := repository.LoadIteration(); err != nil {

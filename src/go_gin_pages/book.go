@@ -100,6 +100,7 @@ func (bh *bookHandler) postBookHandler() gin.HandlerFunc {
 			return
 		}
 
+
 		if err := bh.repo.CreateBook(&book); err != nil {
 			c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": "code already exists"})
 			return
@@ -135,9 +136,11 @@ func (bh *bookHandler) patchBookHandler() gin.HandlerFunc {
 			return
 		}
 
+
 		c.JSON(http.StatusOK, updatedBook)
 	}
 }
+
 
 func (bh *bookHandler) deleteBookHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
@@ -160,14 +163,14 @@ func (bh *bookHandler) RoleRequirer(handler gin.HandlerFunc, roles []string) fun
 	return func(c *gin.Context) {
 		username, err := bh.accountHandler.confirmUserFromGinContext(c)
 		if err != nil {
-			c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": err.Error()})
+			returnError(c, err)
 			c.Abort()
 			return
 		}
 
 		userRole, err := bh.accountHandler.repo.FindUserRole(username)
 		if err != nil {
-			c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": "failed to retrieve user role"})
+			returnError(c, fmt.Errorf("%w:failed to retrive user role", err))
 			c.Abort()
 			return
 		}

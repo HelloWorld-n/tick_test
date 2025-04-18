@@ -1,15 +1,16 @@
 package go_gin_pages
 
 import (
+	"fmt"
 	"net/http"
 	"time"
 
 	"tick_test/repository"
 	"tick_test/types"
-	"tick_test/utils/errDefs"
 
 	"github.com/gin-gonic/gin"
 )
+
 
 type messageHandler struct {
 	repo           repository.MessageRepository
