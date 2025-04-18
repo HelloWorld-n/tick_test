@@ -4,19 +4,27 @@ import (
 	"fmt"
 	"tick_test/types"
 	"tick_test/utils/errDefs"
+
+	"github.com/gin-gonic/gin"
 )
 
-func SaveMessage(msg *types.Message) error {
-	if database == nil {
+type MessageRepository interface {
+	EnsureDatabaseIsOK(fn func(*gin.Context)) func(c *gin.Context)
+	SaveMessage(msg *types.Message) error
+	FindMessages(username string, sent bool, recv bool) (msgs []types.Message, err error)
+}
+
+func (r *repo) SaveMessage(msg *types.Message) error {
+	if r.DB.Conn == nil {
 		return errDefs.ErrDatabaseOffline
 	}
 	query := `INSERT INTO messages (from_user, to_user, content, created_at) VALUES ($1, $2, $3, $4)`
-	_, err := database.Exec(query, msg.From, msg.To, msg.Content, msg.When)
+	_, err := r.DB.Conn.Exec(query, msg.From, msg.To, msg.Content, msg.When)
 	return err
 }
 
-func FindMessages(username string, sent bool, recv bool) (msgs []types.Message, err error) {
-	if database == nil {
+func (r *repo) FindMessages(username string, sent bool, recv bool) (msgs []types.Message, err error) {
+	if r.DB.Conn == nil {
 		return nil, errDefs.ErrDatabaseOffline
 	}
 
@@ -32,7 +40,7 @@ func FindMessages(username string, sent bool, recv bool) (msgs []types.Message, 
 		return []types.Message{}, nil
 	}
 
-	rows, err := database.Query(query, username)
+	rows, err := r.DB.Conn.Query(query, username)
 	if err != nil {
 		return nil, err
 	}
@@ -49,9 +57,9 @@ func FindMessages(username string, sent bool, recv bool) (msgs []types.Message, 
 	return msgs, nil
 }
 
-func doPostgresPreparationForMessages() {
-	if database != nil {
-		result, err := database.Exec(`
+func (r *repo) doPostgresPreparationForMessages() {
+	if r.DB.Conn != nil {
+		result, err := r.DB.Conn.Exec(`
 			CREATE TABLE IF NOT EXISTS messages (
 				id SERIAL PRIMARY KEY,
 				from_user VARCHAR(100) NOT NULL,

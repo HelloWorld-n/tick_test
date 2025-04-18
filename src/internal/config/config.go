@@ -7,6 +7,7 @@ import (
 )
 
 type Config struct {
+	DBPath  string `yaml:"dbPath"`
 	BaseURL string `yaml:"baseURL"`
 	Port    string `yaml:"port"`
 }
