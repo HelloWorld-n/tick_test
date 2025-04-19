@@ -27,7 +27,7 @@ var IterationMutex sync.Mutex
 
 func logPossibleError(err error) {
 	if err != nil {
-		logrus.Fatal(err)
+		logrus.Error(err)
 	}
 }
 

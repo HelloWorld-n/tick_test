@@ -326,29 +326,21 @@ func (r *repo) doPostgresPreparationForAccount() {
 			ALTER COLUMN role_id SET NOT NULL;
 		`)
 		logPossibleError(err)
-		sr, err := r.DB.Conn.Exec(`
+		_, err = r.DB.Conn.Exec(`
 			ALTER TABLE account ADD COLUMN IF NOT EXISTS id SERIAL;
 		`)
-		n, errRowsAffected := sr.RowsAffected()
 		logPossibleError(err)
-		logPossibleError(errRowsAffected)
-		if n > 0 {
-			logPossibleError(err)
-			_, err = r.DB.Conn.Exec(`
-				ALTER TABLE account DROP CONSTRAINT IF EXISTS account_pkey;
-			`)
-
-			logPossibleError(err)
-			_, err = r.DB.Conn.Exec(`
-				ALTER TABLE account ADD PRIMARY KEY (id);
-			`)
-
-			logPossibleError(err)
-			_, err = r.DB.Conn.Exec(`
-				ALTER TABLE account ADD CONSTRAINT unique_username UNIQUE(username);
-			`)
-		}
-
+		_, err = r.DB.Conn.Exec(`
+			ALTER TABLE account DROP CONSTRAINT IF EXISTS account_pkey;
+		`)
+		logPossibleError(err)
+		_, err = r.DB.Conn.Exec(`
+			ALTER TABLE account ADD PRIMARY KEY (id);
+		`)
+		logPossibleError(err)
+		_, err = r.DB.Conn.Exec(`
+			ALTER TABLE account ADD CONSTRAINT unique_username UNIQUE(username);
+		`)
 		logPossibleError(err)
 	}
 }
