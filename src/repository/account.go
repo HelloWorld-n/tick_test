@@ -61,7 +61,10 @@ func (r *repo) FindPaginatedAccounts(pageSize int, pageNumber int) (accounts []t
 
 	offset := (pageNumber - 1) * pageSize
 
-	query := `SELECT username, role FROM book ORDER BY id LIMIT $1 OFFSET $2`
+	query := `SELECT 
+		username, 
+		(SELECT name FROM role WHERE acc.role_id = id)
+	FROM account acc ORDER BY id LIMIT $1 OFFSET $2`
 	rows, err := r.DB.Conn.Query(query, pageSize, offset)
 	if err != nil {
 		return nil, err
