@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strconv"
 	"sync"
 	"tick_test/repository"
 	"tick_test/types"
@@ -31,6 +32,36 @@ type accountHandler struct {
 func NewAccountHandler(accountRepo repository.AccountRepository) (res *accountHandler) {
 	return &accountHandler{
 		repo: accountRepo,
+	}
+}
+
+func (ah *accountHandler) getPaginatedAccountsHandler() gin.HandlerFunc {
+	return func(c *gin.Context) {
+		pageSize, err := strconv.Atoi(c.Query("pageSize"))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+			return
+		}
+		pageNumber, err := strconv.Atoi(c.Query("pageNumber"))
+		if err != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"Error": err.Error()})
+			return
+		}
+		if pageNumber <= 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"Error": "pageNumber must be greater than 0"})
+			return
+		}
+		if pageSize <= 0 {
+			c.JSON(http.StatusBadRequest, gin.H{"Error": "pageSize must be greater than 0"})
+			return
+		}
+
+		accounts, err := ah.repo.FindPaginatedAccounts(pageSize, pageNumber)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"Error": err.Error()})
+			return
+		}
+		c.JSON(http.StatusOK, accounts)
 	}
 }
 
@@ -212,6 +243,7 @@ func (ah *accountHandler) postAccountHandler() gin.HandlerFunc {
 
 func (ah *accountHandler) prepareAccount(route *gin.RouterGroup) {
 	route.GET("/all", ah.repo.EnsureDatabaseIsOK(ah.getAllAccountsHandler()))
+	route.GET("/", ah.repo.EnsureDatabaseIsOK(ah.getPaginatedAccountsHandler()))
 	route.POST("/register", ah.repo.EnsureDatabaseIsOK(ah.postAccountHandler()))
 	route.POST("/login", ah.repo.EnsureDatabaseIsOK(ah.loginHandler()))
 	route.PATCH("/modify", ah.repo.EnsureDatabaseIsOK(ah.patchAccountHandler()))
