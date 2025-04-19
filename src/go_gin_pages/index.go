@@ -113,8 +113,8 @@ func Prepare(engine *gin.Engine, url string, repo repository.Repository) {
 	messageHandler.accountHandler = accountHandler
 
 	manipulatorHandler.prepareManipulator(engine.Group("/v1/manipulators"))
-	prepareSort(engine.Group("/sort"))
-	preparePassword(engine.Group("/password"))
+	prepareSort(engine.Group("/v1/sort"))
+	preparePassword(engine.Group("/v1/password"))
 	accountHandler.prepareAccount(engine.Group("/v1/accounts"))
 	messageHandler.prepareMessage(engine.Group("/v1/messages"))
 	bookHandler.prepareBook(engine.Group("/v1/books"))
