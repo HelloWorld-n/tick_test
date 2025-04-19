@@ -2,6 +2,7 @@ package go_gin_pages_test
 
 import (
 	"errors"
+	"net/http"
 	"net/http/httptest"
 	"testing"
 	ginPages "tick_test/go_gin_pages"
@@ -56,7 +57,7 @@ func TestGetAllAccounts(mainT *testing.T) {
 				},
 			},
 			expectedPayload: `[{"username":"Strale","role":"admin"}]`,
-			expectedStatus:  200,
+			expectedStatus:  http.StatusOK,
 		},
 		{
 			name: "Fail",
@@ -66,7 +67,17 @@ func TestGetAllAccounts(mainT *testing.T) {
 				},
 			},
 			expectedPayload: `{"Error":"something happened"}`,
-			expectedStatus:  500,
+			expectedStatus:  http.StatusInternalServerError,
+		},
+		{
+			name: "Empty result set",
+			repo: &mocks.AccountRepositoryMock{
+				FindAllAccountsFn: func() ([]types.AccountGetData, error) {
+					return []types.AccountGetData{}, nil
+				},
+			},
+			expectedPayload: `[]`,
+			expectedStatus:  http.StatusOK,
 		},
 	}
 	for _, tc := range testCases {
