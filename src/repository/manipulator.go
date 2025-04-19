@@ -208,7 +208,7 @@ func (r *repo) DeleteManipulatorFromDatabase(code string) error {
 
 func (r *repo) doPostgresPreparationForManipulator() {
 	if r.DB.Conn != nil {
-		_, err := r.DB.Conn.Query(`
+		_, err := r.DB.Conn.Exec(`
 			CREATE TABLE IF NOT EXISTS manipulator (
 				code varchar(100) PRIMARY KEY,
 				duration varchar(30) NOT NULL,

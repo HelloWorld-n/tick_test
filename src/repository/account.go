@@ -327,7 +327,9 @@ func (r *repo) doPostgresPreparationForAccount() {
 		sr, err := r.DB.Conn.Exec(`
 			ALTER TABLE account ADD COLUMN IF NOT EXISTS id SERIAL;
 		`)
-		n, _ := sr.RowsAffected()
+		n, errRowsAffected := sr.RowsAffected()
+		logPossibleError(err)
+		logPossibleError(errRowsAffected)
 		if n > 0 {
 			logPossibleError(err)
 			_, err = r.DB.Conn.Exec(`
