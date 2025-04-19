@@ -4,12 +4,9 @@ import (
 	"fmt"
 	"tick_test/types"
 	errDefs "tick_test/utils/errDefs"
-
-	"github.com/gin-gonic/gin"
 )
 
 type BookRepository interface {
-	EnsureDatabaseIsOK(fn func(*gin.Context)) func(c *gin.Context)
 	FindAllBooks() (books []types.Book, err error)
 	FindPaginatedBooks(pageSize int, pageNumber int) (books []types.Book, err error)
 	FindBookByCode(code string) (book types.Book, err error)

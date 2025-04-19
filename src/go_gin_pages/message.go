@@ -104,8 +104,8 @@ func (mh *messageHandler) getReceivedMessagesHandler() gin.HandlerFunc {
 }
 
 func (mh *messageHandler) prepareMessage(route *gin.RouterGroup) {
-	route.POST("/send", mh.repo.EnsureDatabaseIsOK(mh.sendMessageHandler()))
-	route.GET("/user", mh.repo.EnsureDatabaseIsOK(mh.getMessagesHandler()))
-	route.GET("/sent-by", mh.repo.EnsureDatabaseIsOK(mh.getSentMessagesHandler()))
-	route.GET("/recv-by", mh.repo.EnsureDatabaseIsOK(mh.getReceivedMessagesHandler()))
+	route.POST("/send", mh.sendMessageHandler())
+	route.GET("/user", mh.getMessagesHandler())
+	route.GET("/sent-by", mh.getSentMessagesHandler())
+	route.GET("/recv-by", mh.getReceivedMessagesHandler())
 }

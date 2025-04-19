@@ -5,16 +5,12 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"net/http"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"tick_test/sql_conn"
 	"tick_test/types"
-	"tick_test/utils/errDefs"
-
-	"github.com/gin-gonic/gin"
 )
 
 const iterationFile = "../.data/Iteration.json"
@@ -53,21 +49,6 @@ func (r *repo) DoPostgresPreparation() (db *sql.DB, err error) {
 	r.loadIterationManipulators()
 	LoadIteration()
 	return
-}
-
-func (r *repo) EnsureDatabaseIsOK(fn func(*gin.Context)) func(c *gin.Context) {
-	return func(c *gin.Context) {
-		if r.DB.Conn == nil {
-			c.JSON(
-				http.StatusInternalServerError,
-				gin.H{
-					`Error`: errDefs.ErrDatabaseOffline,
-				},
-			)
-			return
-		}
-		fn(c)
-	}
 }
 
 func LoadDatabasePath() (url string, err error) {
