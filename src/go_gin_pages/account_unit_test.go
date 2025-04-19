@@ -94,3 +94,26 @@ func TestGetAllAccounts(mainT *testing.T) {
 		})
 	}
 }
+func TestLoginHandler_Success(t *testing.T) {
+	repo := &mocks.AccountRepositoryMock{
+		ConfirmAccountFn: func(username, password string) error {
+			if username == "valid" && password == "pass" {
+				return nil
+			}
+			return errors.New("invalid")
+		},
+	}
+
+	handler := ginPages.NewAccountHandler(repo).LoginHandler()
+
+	w := httptest.NewRecorder()
+	c, _ := gin.CreateTestContext(w)
+	c.Request, _ = http.NewRequest(http.MethodPost, "/", nil)
+	c.Request.Header.Set("Username", "valid")
+	c.Request.Header.Set("Password", "pass")
+
+	handler(c)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	assert.Len(t, w.Body.String(), 82) // token length
+}

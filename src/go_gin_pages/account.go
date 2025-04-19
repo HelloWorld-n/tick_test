@@ -163,7 +163,7 @@ func (ah *accountHandler) confirmAccountFromGinContext(c *gin.Context) (username
 	return username, role, nil
 }
 
-func (ah *accountHandler) loginHandler() gin.HandlerFunc {
+func (ah *accountHandler) LoginHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		username := c.GetHeader("Username")
 		password := c.GetHeader("Password")
@@ -213,7 +213,7 @@ func (ah *accountHandler) postAccountHandler() gin.HandlerFunc {
 func (ah *accountHandler) prepareAccount(route *gin.RouterGroup) {
 	route.GET("/all", ah.repo.EnsureDatabaseIsOK(ah.GetAllAccountsHandler()))
 	route.POST("/register", ah.repo.EnsureDatabaseIsOK(ah.postAccountHandler()))
-	route.POST("/login", ah.repo.EnsureDatabaseIsOK(ah.loginHandler()))
+	route.POST("/login", ah.repo.EnsureDatabaseIsOK(ah.LoginHandler()))
 	route.PATCH("/modify", ah.repo.EnsureDatabaseIsOK(ah.patchAccountHandler()))
 	route.PATCH("/promote", ah.repo.EnsureDatabaseIsOK(ah.patchPromoteAccountHandler()))
 	route.DELETE("/delete", ah.repo.EnsureDatabaseIsOK(ah.deleteAccountHandler()))
