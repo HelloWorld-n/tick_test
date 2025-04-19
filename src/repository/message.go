@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"tick_test/types"
 	"tick_test/utils/errDefs"
+
+	"github.com/sirupsen/logrus"
 )
 
 type MessageRepository interface {
@@ -93,7 +95,8 @@ func (r *repo) doPostgresPreparationForMessages() {
 				FOREIGN KEY (to_user) REFERENCES account(username)
 			);
 		`)
-		fmt.Println(result, err)
+		logrus.Info(result)
+		logPossibleError(err)
 
 		var columnType string
 		err = r.DB.Conn.QueryRow(`
@@ -102,56 +105,57 @@ func (r *repo) doPostgresPreparationForMessages() {
 			WHERE table_name = 'messages' AND column_name = 'from_user';
 		`).Scan(&columnType)
 		if err != nil {
-			fmt.Println("Error querying column type:", err)
+			logrus.Error("Error querying column type:", err)
 			return
 		}
 		if columnType == "character varying" {
-			fmt.Println(result, err)
-			res, err := r.DB.Conn.Exec(`
+			logrus.Info(result)
+			logPossibleError(err)
+			_, err := r.DB.Conn.Exec(`
 				ALTER TABLE messages ADD COLUMN IF NOT EXISTS from_id INT;
 			`)
-			fmt.Println(res, err)
+			logPossibleError(err)
 
-			res, err = r.DB.Conn.Exec(`
+			_, err = r.DB.Conn.Exec(`
 				ALTER TABLE messages ADD COLUMN IF NOT EXISTS to_id INT;
 			`)
-			fmt.Println(res, err)
+			logPossibleError(err)
 
-			res, err = r.DB.Conn.Exec(`
+			_, err = r.DB.Conn.Exec(`
 				UPDATE messages SET from_id = (
 					SELECT id FROM account WHERE account.username = messages.from_user
 				);
 			`)
-			fmt.Println(res, err)
+			logPossibleError(err)
 
-			res, err = r.DB.Conn.Exec(`
+			_, err = r.DB.Conn.Exec(`
 				UPDATE messages SET to_id = (
 					SELECT id FROM account WHERE account.username = messages.to_user
 				);
 			`)
-			fmt.Println(res, err)
+			logPossibleError(err)
 
-			res, err = r.DB.Conn.Exec(`ALTER TABLE messages DROP CONSTRAINT IF EXISTS messages_from_user_fkey;`)
-			fmt.Println(res, err)
-			res, err = r.DB.Conn.Exec(`ALTER TABLE messages DROP CONSTRAINT IF EXISTS messages_to_user_fkey;`)
-			fmt.Println(res, err)
+			_, err = r.DB.Conn.Exec(`ALTER TABLE messages DROP CONSTRAINT IF EXISTS messages_from_user_fkey;`)
+			logPossibleError(err)
+			_, err = r.DB.Conn.Exec(`ALTER TABLE messages DROP CONSTRAINT IF EXISTS messages_to_user_fkey;`)
+			logPossibleError(err)
 
-			res, err = r.DB.Conn.Exec(`ALTER TABLE messages DROP COLUMN IF EXISTS from_user;`)
-			fmt.Println(res, err)
-			res, err = r.DB.Conn.Exec(`ALTER TABLE messages DROP COLUMN IF EXISTS to_user;`)
-			fmt.Println(res, err)
+			_, err = r.DB.Conn.Exec(`ALTER TABLE messages DROP COLUMN IF EXISTS from_user;`)
+			logPossibleError(err)
+			_, err = r.DB.Conn.Exec(`ALTER TABLE messages DROP COLUMN IF EXISTS to_user;`)
+			logPossibleError(err)
 
-			res, err = r.DB.Conn.Exec(`ALTER TABLE messages RENAME COLUMN from_id TO from_user;`)
-			fmt.Println(res, err)
-			res, err = r.DB.Conn.Exec(`ALTER TABLE messages RENAME COLUMN to_id TO to_user;`)
-			fmt.Println(res, err)
+			_, err = r.DB.Conn.Exec(`ALTER TABLE messages RENAME COLUMN from_id TO from_user;`)
+			logPossibleError(err)
+			_, err = r.DB.Conn.Exec(`ALTER TABLE messages RENAME COLUMN to_id TO to_user;`)
+			logPossibleError(err)
 
-			res, err = r.DB.Conn.Exec(`
+			_, err = r.DB.Conn.Exec(`
 				ALTER TABLE messages 
 				ADD CONSTRAINT messages_from_user_fk FOREIGN KEY (from_user) REFERENCES account(id),
 				ADD CONSTRAINT messages_to_user_fk FOREIGN KEY (to_user) REFERENCES account(id);
 			`)
-			fmt.Println(res, err)
+			logPossibleError(err)
 		}
 	}
 }

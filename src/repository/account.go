@@ -287,58 +287,64 @@ func (r *repo) FindUserRole(username string) (string, error) {
 
 func (r *repo) doPostgresPreparationForAccount() {
 	if r.DB.Conn != nil {
-		result, err := r.DB.Conn.Exec(`
+		_, err := r.DB.Conn.Exec(`
 			CREATE TABLE IF NOT EXISTS account (
 				username varchar(100) PRIMARY KEY,
 				password varchar(500) NOT NULL
 			);
 		`)
-		fmt.Println(result, err)
-		result, err = r.DB.Conn.Exec(`
+		logPossibleError(err)
+		_, err = r.DB.Conn.Exec(`
 			CREATE TABLE IF NOT EXISTS role (
 				id SERIAL PRIMARY KEY,
 				name TEXT UNIQUE NOT NULL
 			);
 		`)
-		fmt.Println(result, err)
-		result, err = r.DB.Conn.Exec(`
+		logPossibleError(err)
+		_, err = r.DB.Conn.Exec(`
 			INSERT INTO role (name) VALUES
 				('User'),
 				('BookKeeper'),
 				('Admin')
 			ON CONFLICT (name) DO NOTHING;
 		`)
-		fmt.Println(result, err)
-		result, err = r.DB.Conn.Exec(`
+		logPossibleError(err)
+		_, err = r.DB.Conn.Exec(`
 			ALTER TABLE account ADD COLUMN IF NOT EXISTS role_id INT REFERENCES role(id);
 		`)
-		fmt.Println(result, err)
-		result, err = r.DB.Conn.Exec(`
+		logPossibleError(err)
+		_, err = r.DB.Conn.Exec(`
 			UPDATE account
 			SET role_id = (SELECT id FROM role WHERE name = 'User')
 			WHERE role_id IS NULL;
 		`)
-		fmt.Println(result, err)
-		result, err = r.DB.Conn.Exec(`
+		logPossibleError(err)
+		_, err = r.DB.Conn.Exec(`
 			ALTER TABLE account
 			ALTER COLUMN role_id SET NOT NULL;
 		`)
-		fmt.Println(result, err)
-		result, err = r.DB.Conn.Exec(`
+		logPossibleError(err)
+		sr, err := r.DB.Conn.Exec(`
 			ALTER TABLE account ADD COLUMN IF NOT EXISTS id SERIAL;
 		`)
-		fmt.Println(result, err)
-		result, err = r.DB.Conn.Exec(`
-			ALTER TABLE account DROP CONSTRAINT IF EXISTS account_pkey;
-		`)
-		fmt.Println(result, err)
-		result, err = r.DB.Conn.Exec(`
-			ALTER TABLE account ADD PRIMARY KEY (id);
-		`)
-		fmt.Println(result, err)
-		result, err = r.DB.Conn.Exec(`
-			ALTER TABLE account ADD CONSTRAINT unique_username UNIQUE(username);
-		`)
-		fmt.Println(result, err)
+		n, _ := sr.RowsAffected()
+		if n > 0 {
+			logPossibleError(err)
+			_, err = r.DB.Conn.Exec(`
+				ALTER TABLE account DROP CONSTRAINT IF EXISTS account_pkey;
+			`)
+
+			logPossibleError(err)
+			_, err = r.DB.Conn.Exec(`
+				ALTER TABLE account ADD PRIMARY KEY (id);
+			`)
+
+			logPossibleError(err)
+			_, err = r.DB.Conn.Exec(`
+				ALTER TABLE account ADD CONSTRAINT unique_username UNIQUE(username);
+			`)
+		}
+
+		logPossibleError(err)
 	}
 }
