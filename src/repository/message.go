@@ -4,12 +4,9 @@ import (
 	"fmt"
 	"tick_test/types"
 	"tick_test/utils/errDefs"
-
-	"github.com/gin-gonic/gin"
 )
 
 type MessageRepository interface {
-	EnsureDatabaseIsOK(fn func(*gin.Context)) func(c *gin.Context)
 	SaveMessage(msg *types.Message) error
 	FindMessages(username string, sent bool, recv bool) (msgs []types.Message, err error)
 }

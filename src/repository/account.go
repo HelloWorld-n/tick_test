@@ -8,12 +8,10 @@ import (
 	"tick_test/types"
 	errDefs "tick_test/utils/errDefs"
 
-	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type AccountRepository interface {
-	EnsureDatabaseIsOK(fn func(*gin.Context)) func(c *gin.Context)
 	UserExists(username string) (exists bool, err error)
 	ConfirmAccount(username string, password string) (err error)
 	FindAllAccounts() (data []types.AccountGetData, err error)

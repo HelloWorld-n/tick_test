@@ -242,11 +242,11 @@ func (ah *accountHandler) postAccountHandler() gin.HandlerFunc {
 }
 
 func (ah *accountHandler) prepareAccount(route *gin.RouterGroup) {
-	route.GET("/all", ah.repo.EnsureDatabaseIsOK(ah.getAllAccountsHandler()))
-	route.GET("/", ah.repo.EnsureDatabaseIsOK(ah.getPaginatedAccountsHandler()))
-	route.POST("/register", ah.repo.EnsureDatabaseIsOK(ah.postAccountHandler()))
-	route.POST("/login", ah.repo.EnsureDatabaseIsOK(ah.loginHandler()))
-	route.PATCH("/modify", ah.repo.EnsureDatabaseIsOK(ah.patchAccountHandler()))
-	route.PATCH("/promote", ah.repo.EnsureDatabaseIsOK(ah.patchPromoteAccountHandler()))
-	route.DELETE("/delete", ah.repo.EnsureDatabaseIsOK(ah.deleteAccountHandler()))
+	route.GET("/all", ah.getAllAccountsHandler())
+	route.GET("/", ah.getPaginatedAccountsHandler())
+	route.POST("/register", ah.postAccountHandler())
+	route.POST("/login", ah.loginHandler())
+	route.PATCH("/modify", ah.patchAccountHandler())
+	route.PATCH("/promote", ah.patchPromoteAccountHandler())
+	route.DELETE("/delete", ah.deleteAccountHandler())
 }
