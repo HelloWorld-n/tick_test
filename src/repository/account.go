@@ -296,5 +296,21 @@ func (r *repo) doPostgresPreparationForAccount() {
 			ALTER COLUMN role_id SET NOT NULL;
 		`)
 		fmt.Println(result, err)
+		result, err = database.Exec(`
+			ALTER TABLE account ADD COLUMN IF NOT EXISTS id SERIAL;
+		`)
+		fmt.Println(result, err)
+		result, err = database.Exec(`
+			ALTER TABLE account DROP CONSTRAINT IF EXISTS account_pkey;
+		`)
+		fmt.Println(result, err)
+		result, err = database.Exec(`
+			ALTER TABLE account ADD PRIMARY KEY (id);
+		`)
+		fmt.Println(result, err)
+		result, err = database.Exec(`
+			ALTER TABLE account ADD CONSTRAINT unique_username UNIQUE(username);
+		`)
+		fmt.Println(result, err)
 	}
 }
