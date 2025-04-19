@@ -11,18 +11,23 @@ import (
 
 	"tick_test/internal/config"
 	"tick_test/repository"
+	"tick_test/utils/errDefs"
 
 	"github.com/gin-gonic/gin"
 )
 
 const urlFile = "../.config/url.txt"
 
+func returnError(c *gin.Context, err error) {
+	c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": err.Error()})
+}
+
 func index(c *gin.Context) {
 	if err := repository.LoadIteration(); err != nil {
 		c.JSON(
 			http.StatusInternalServerError,
 			gin.H{
-				"Error": fmt.Sprintf("Failed to load iteration: %v", err),
+				"error": fmt.Sprintf("Failed to load iteration: %v", err),
 			},
 		)
 		return
@@ -60,7 +65,7 @@ func UseConfigToDetermineURL(cfg *config.Config) (url string) {
 	return net.JoinHostPort(cfg.BaseURL, cfg.Port)
 }
 
-func Prepare(engine *gin.Engine, url string) {
+func Prepare(engine *gin.Engine, url string, repo repository.Repository) {
 	cmw := &corsMiddleware{
 		origin: url,
 	}
@@ -97,12 +102,21 @@ func Prepare(engine *gin.Engine, url string) {
 		c.Next()
 	})
 
-	repository.DoPostgresPreparation()
+	repo.DoPostgresPreparation()
 	engine.GET("/", index)
-	prepareManipulator(engine.Group("/manipulator"))
+	accountHandler := NewAccountHandler(repo)
+	bookHandler := NewBookHandler(repo)
+	manipulatorHandler := NewManipulatorHandler(repo)
+	messageHandler := NewMessageHandler(repo)
+
+	bookHandler.accountHandler = accountHandler
+	messageHandler.accountHandler = accountHandler
+
+	manipulatorHandler.prepareManipulator(engine.Group("/manipulator"))
 	prepareSort(engine.Group("/sort"))
 	preparePassword(engine.Group("/password"))
-	prepareAccount(engine.Group("/account"))
-	prepareMessage(engine.Group("/message"))
-	prepareBook(engine.Group("/book"))
+	accountHandler.prepareAccount(engine.Group("/account"))
+	messageHandler.prepareMessage(engine.Group("/message"))
+	bookHandler.prepareBook(engine.Group("/book"))
+
 }

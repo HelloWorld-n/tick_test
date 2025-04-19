@@ -8,36 +8,51 @@ import (
 	"sync"
 	"tick_test/types"
 	"time"
+
+	"github.com/gin-gonic/gin"
 )
+
+type ManipulatorRepository interface {
+	EnsureDatabaseIsOK(fn func(*gin.Context)) func(c *gin.Context)
+	IsDatabaseEnabled() bool
+	ApplyUpdateToIterationManipulator(data UpdateIterationManipulatorData, v *IterationManipulator) (dur time.Duration, err error)
+	LoadIterationManipulatorsFromFile() error
+	SaveIterationManipulators() error
+	ReadManipulatorsFromFile() ([]*IterationManipulator, error)
+	LoadIterationManipulatorsFromDatabase() error
+	SaveIterationManipulatorToDatabase(obj *IterationManipulator) (err error)
+	UpdateManipulatorInDatabase(code string, duration types.ISO8601Duration, value int) error
+	DeleteManipulatorFromDatabase(code string) error
+}
 
 const iterationManipulatorFile = "../.data/IterationManipulators.json"
 
 type IterationManipulator struct {
-	Code        string                  `json:"Code"`
-	Data        ManipulateIterationData `json:"Data"`
+	Code        string                  `json:"code"`
+	Data        ManipulateIterationData `json:"data"`
 	Manipulator *time.Ticker            `json:"-"`
 }
 
 type ManipulateIterationData struct {
-	Duration types.ISO8601Duration `json:"Duration" binding:"required"`
-	Value    int                   `json:"Value" binding:"required"`
+	Duration types.ISO8601Duration `json:"duration" binding:"required"`
+	Value    int                   `json:"value" binding:"required"`
 }
 
 type UpdateIterationManipulatorData struct {
-	Duration *types.ISO8601Duration `json:"Duration"`
-	Value    *int                   `json:"Value"`
+	Duration *types.ISO8601Duration `json:"duration"`
+	Value    *int                   `json:"value"`
 }
 
 var IterationManipulatorMutex sync.Mutex
 var IterationManipulators []*IterationManipulator = make([]*IterationManipulator, 0)
 
-func loadIterationManipulators() error {
-	if database != nil {
-		if err := LoadIterationManipulatorsFromDatabase(); err != nil {
+func (r *repo) loadIterationManipulators() error {
+	if r.DB.Conn != nil {
+		if err := r.LoadIterationManipulatorsFromDatabase(); err != nil {
 			return err
 		}
 	} else {
-		if err := LoadIterationManipulatorsFromFile(); err != nil {
+		if err := r.LoadIterationManipulatorsFromFile(); err != nil {
 			return err
 		}
 	}
@@ -53,7 +68,7 @@ func loadIterationManipulators() error {
 	return nil
 }
 
-func ApplyUpdateToIterationManipulator(data UpdateIterationManipulatorData, v *IterationManipulator) (dur time.Duration, err error) {
+func (r *repo) ApplyUpdateToIterationManipulator(data UpdateIterationManipulatorData, v *IterationManipulator) (dur time.Duration, err error) {
 	if data.Duration != nil {
 		dur, err = types.ParseISO8601Duration(*data.Duration, time.Second)
 		if err != nil {
@@ -68,8 +83,8 @@ func ApplyUpdateToIterationManipulator(data UpdateIterationManipulatorData, v *I
 	if data.Value != nil {
 		v.Data.Value = *data.Value
 	}
-	if database != nil {
-		err = UpdateManipulatorInDatabase(v.Code, v.Data.Duration, v.Data.Value)
+	if r.DB.Conn != nil {
+		err = r.UpdateManipulatorInDatabase(v.Code, v.Data.Duration, v.Data.Value)
 		if err != nil {
 			return 0, err
 		}
@@ -89,8 +104,8 @@ func ManipulateIteration(obj *IterationManipulator) error {
 	return nil
 }
 
-func LoadIterationManipulatorsFromFile() error {
-	manipulators, err := ReadManipulatorsFromFile()
+func (r *repo) LoadIterationManipulatorsFromFile() error {
+	manipulators, err := r.ReadManipulatorsFromFile()
 	if err != nil {
 		return err
 	}
@@ -98,13 +113,13 @@ func LoadIterationManipulatorsFromFile() error {
 	return nil
 }
 
-func SaveIterationManipulators() error {
+func (r *repo) SaveIterationManipulators() error {
 	IterationManipulatorMutex.Lock()
 	defer IterationManipulatorMutex.Unlock()
 	return WriteManipulatorsToFile(IterationManipulators)
 }
 
-func ReadManipulatorsFromFile() ([]*IterationManipulator, error) {
+func (r *repo) ReadManipulatorsFromFile() ([]*IterationManipulator, error) {
 	file, err := os.Open(iterationManipulatorFile)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -137,10 +152,10 @@ func WriteManipulatorsToFile(manipulators []*IterationManipulator) error {
 	return encoder.Encode(manipulators)
 }
 
-func LoadIterationManipulatorsFromDatabase() error {
+func (r *repo) LoadIterationManipulatorsFromDatabase() error {
 	query := `SELECT code, duration, value FROM manipulator`
 
-	rows, err := database.Query(query)
+	rows, err := r.DB.Conn.Query(query)
 	if err != nil {
 		return err
 	}
@@ -173,30 +188,30 @@ func LoadIterationManipulatorsFromDatabase() error {
 	return nil
 }
 
-func SaveIterationManipulatorToDatabase(obj *IterationManipulator) (err error) {
-	if database == nil {
+func (r *repo) SaveIterationManipulatorToDatabase(obj *IterationManipulator) (err error) {
+	if r.DB.Conn == nil {
 		return
 	}
 	query := `INSERT INTO manipulator (code, duration, value) VALUES ($1, $2, $3)`
-	_, err = database.Exec(query, obj.Code, obj.Data.Duration, obj.Data.Value)
+	_, err = r.DB.Conn.Exec(query, obj.Code, obj.Data.Duration, obj.Data.Value)
 	return
 }
 
-func UpdateManipulatorInDatabase(code string, duration types.ISO8601Duration, value int) error {
+func (r *repo) UpdateManipulatorInDatabase(code string, duration types.ISO8601Duration, value int) error {
 	query := `UPDATE manipulator SET duration = $1, value = $2 WHERE code = $3`
-	_, err := database.Exec(query, duration, value, code)
+	_, err := r.DB.Conn.Exec(query, duration, value, code)
 	return err
 }
 
-func DeleteManipulatorFromDatabase(code string) error {
+func (r *repo) DeleteManipulatorFromDatabase(code string) error {
 	query := `DELETE FROM manipulator WHERE code = $1`
-	_, err := database.Exec(query, code)
+	_, err := r.DB.Conn.Exec(query, code)
 	return err
 }
 
-func doPostgresPreparationForManipulator() {
-	if database != nil {
-		result, _ := database.Query(`
+func (r *repo) doPostgresPreparationForManipulator() {
+	if r.DB.Conn != nil {
+		result, _ := r.DB.Conn.Query(`
 			CREATE TABLE IF NOT EXISTS manipulator (
 				code varchar(100) PRIMARY KEY,
 				duration varchar(30) NOT NULL,
