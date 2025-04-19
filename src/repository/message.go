@@ -84,7 +84,7 @@ func (r *repo) FindMessages(username string, sent bool, recv bool) (msgs []types
 
 func (r *repo) doPostgresPreparationForMessages() {
 	if r.DB.Conn != nil {
-		result, err := r.DB.Conn.Exec(`
+		_, err := r.DB.Conn.Exec(`
 			CREATE TABLE IF NOT EXISTS messages (
 				id SERIAL PRIMARY KEY,
 				from_user VARCHAR(100) NOT NULL,
@@ -95,7 +95,6 @@ func (r *repo) doPostgresPreparationForMessages() {
 				FOREIGN KEY (to_user) REFERENCES account(username)
 			);
 		`)
-		logrus.Info(result)
 		logPossibleError(err)
 
 		var columnType string
@@ -109,7 +108,6 @@ func (r *repo) doPostgresPreparationForMessages() {
 			return
 		}
 		if columnType == "character varying" {
-			logrus.Info(result)
 			logPossibleError(err)
 			_, err := r.DB.Conn.Exec(`
 				ALTER TABLE messages ADD COLUMN IF NOT EXISTS from_id INT;
