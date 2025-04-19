@@ -103,7 +103,7 @@ func Prepare(engine *gin.Engine, url string, repo repository.Repository) {
 	})
 
 	repo.DoPostgresPreparation()
-	engine.GET("/", index)
+	engine.GET("/v1", index)
 	accountHandler := NewAccountHandler(repo)
 	bookHandler := NewBookHandler(repo)
 	manipulatorHandler := NewManipulatorHandler(repo)
@@ -112,11 +112,11 @@ func Prepare(engine *gin.Engine, url string, repo repository.Repository) {
 	bookHandler.accountHandler = accountHandler
 	messageHandler.accountHandler = accountHandler
 
-	manipulatorHandler.prepareManipulator(engine.Group("/manipulator"))
+	manipulatorHandler.prepareManipulator(engine.Group("/manipulators"))
 	prepareSort(engine.Group("/sort"))
 	preparePassword(engine.Group("/password"))
-	accountHandler.prepareAccount(engine.Group("/account"))
-	messageHandler.prepareMessage(engine.Group("/message"))
-	bookHandler.prepareBook(engine.Group("/book"))
+	accountHandler.prepareAccount(engine.Group("/accounts"))
+	messageHandler.prepareMessage(engine.Group("/messages"))
+	bookHandler.prepareBook(engine.Group("/books"))
 
 }
