@@ -100,7 +100,6 @@ func (bh *bookHandler) postBookHandler() gin.HandlerFunc {
 			return
 		}
 
-
 		if err := bh.repo.CreateBook(&book); err != nil {
 			c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": "code already exists"})
 			return
@@ -140,13 +139,12 @@ func (bh *bookHandler) patchBookHandler() gin.HandlerFunc {
 	}
 }
 
-
 func (bh *bookHandler) deleteBookHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		code := c.Param("code")
 		rowsAffected, err := bh.repo.RemoveBookByCode(code)
 		if err != nil {
-      returnError(c, err)
+			returnError(c, err)
 			return
 		}
 

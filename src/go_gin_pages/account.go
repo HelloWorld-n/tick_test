@@ -177,7 +177,7 @@ func (ah *accountHandler) loginHandler() gin.HandlerFunc {
 	}
 }
 
-func (ah *accountHandler) getAllAccountsHandler() gin.HandlerFunc {
+func (ah *accountHandler) GetAllAccountsHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		accounts, err := ah.repo.FindAllAccounts()
 		if err != nil {
@@ -211,7 +211,7 @@ func (ah *accountHandler) postAccountHandler() gin.HandlerFunc {
 }
 
 func (ah *accountHandler) prepareAccount(route *gin.RouterGroup) {
-	route.GET("/all", ah.repo.EnsureDatabaseIsOK(ah.getAllAccountsHandler()))
+	route.GET("/all", ah.repo.EnsureDatabaseIsOK(ah.GetAllAccountsHandler()))
 	route.POST("/register", ah.repo.EnsureDatabaseIsOK(ah.postAccountHandler()))
 	route.POST("/login", ah.repo.EnsureDatabaseIsOK(ah.loginHandler()))
 	route.PATCH("/modify", ah.repo.EnsureDatabaseIsOK(ah.patchAccountHandler()))
