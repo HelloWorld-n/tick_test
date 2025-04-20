@@ -14,28 +14,6 @@ import (
 	"github.com/stretchr/testify/assert"
 )
 
-func TestGetAllAccounts_Success(t *testing.T) {
-	repo := &mocks.AccountRepositoryMock{
-		FindAllAccountsFn: func() ([]types.AccountGetData, error) {
-			return []types.AccountGetData{
-				{
-					Username: "Strale",
-					Role:     "admin",
-				},
-			}, nil
-		},
-	}
-
-	ah := ginPages.NewAccountHandler(repo)
-	handler := ah.GetAllAccountsHandler()
-
-	w := httptest.NewRecorder()
-	ctx, _ := gin.CreateTestContext(w)
-	handler(ctx)
-
-	payload := w.Body.String()
-	assert.Equal(t, `[{"username":"Strale","role":"admin"}]`, payload)
-}
 
 func TestGetAllAccounts(mainT *testing.T) {
 	testCases := []struct {
