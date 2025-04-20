@@ -5,19 +5,12 @@ import (
 	"regexp"
 	"testing"
 	"tick_test/repository"
-	"tick_test/repository/mocks"
 	"tick_test/types"
 
 	"github.com/DATA-DOG/go-sqlmock"
 	"github.com/stretchr/testify/require"
 	"golang.org/x/crypto/bcrypt"
 )
-
-func setupMock(t *testing.T) (*mocks.RepoMock, sqlmock.Sqlmock) {
-	db, mock, err := sqlmock.New()
-	require.NoError(t, err)
-	return &mocks.RepoMock{DB: db}, mock
-}
 
 func TestUserExists(t *testing.T) {
 	tests := []struct {
