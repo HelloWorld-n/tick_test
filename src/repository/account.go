@@ -195,7 +195,7 @@ func (r *repo) SaveAccount(obj *types.AccountPostData) (err error) {
 	if err != nil {
 		return
 	}
-	logrus.Info("new account", obj.Username)
+	logrus.Info("new account ", obj.Username)
 
 	_, err = r.DB.Conn.Exec(query, obj.Username, hashedPassword, obj.Role)
 
