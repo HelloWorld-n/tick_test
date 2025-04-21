@@ -8,6 +8,7 @@ import (
 	"tick_test/types"
 	errDefs "tick_test/utils/errDefs"
 
+	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -194,6 +195,7 @@ func (r *repo) SaveAccount(obj *types.AccountPostData) (err error) {
 	if err != nil {
 		return
 	}
+	logrus.Info("new account", obj.Username)
 
 	_, err = r.DB.Conn.Exec(query, obj.Username, hashedPassword, obj.Role)
 
@@ -202,6 +204,7 @@ func (r *repo) SaveAccount(obj *types.AccountPostData) (err error) {
 
 func (r *repo) DeleteAccount(username string) error {
 	_, err := r.DB.Conn.Exec(`DELETE FROM account WHERE username = $1`, username)
+	logrus.Info("deleted account ", username)
 	if err != nil {
 		return fmt.Errorf("error deleting account: %w", err)
 	}
@@ -244,6 +247,7 @@ func (r *repo) UpdateExistingAccount(username string, obj *types.AccountPatchDat
 	}
 	if obj.Username != "" && obj.Username != username {
 		_, err = r.DB.Conn.Exec(`UPDATE account SET username = $1 WHERE username = $2`, obj.Username, username)
+		logrus.Info("account ", username, " changed to ", obj.Username)
 		if err != nil {
 			return err
 		}
