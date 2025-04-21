@@ -41,7 +41,7 @@ func hashPassword(password string) (string, error) {
 }
 
 func confirmPassword(password string, hash string) (err error) {
-	err = bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+	err = fmt.Errorf("%w: %v", errDefs.ErrUnauthorized, bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)))
 	return
 }
 

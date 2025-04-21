@@ -31,7 +31,7 @@ func (mh *messageHandler) sendMessageHandler() gin.HandlerFunc {
 			return
 		}
 
-		username, err := mh.accountHandler.confirmUserFromGinContext(c)
+		username, err := mh.accountHandler.ConfirmUserFromGinContext(c)
 		if err != nil {
 			returnError(c, err)
 			return
@@ -51,7 +51,7 @@ func (mh *messageHandler) sendMessageHandler() gin.HandlerFunc {
 
 func (mh *messageHandler) getMessagesHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		username, err := mh.accountHandler.confirmUserFromGinContext(c)
+		username, err := mh.accountHandler.ConfirmUserFromGinContext(c)
 		if err != nil {
 			returnError(c, err)
 			return
@@ -69,7 +69,7 @@ func (mh *messageHandler) getMessagesHandler() gin.HandlerFunc {
 
 func (mh *messageHandler) getSentMessagesHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		username, err := mh.accountHandler.confirmUserFromGinContext(c)
+		username, err := mh.accountHandler.ConfirmUserFromGinContext(c)
 		if err != nil {
 			returnError(c, err)
 			return
@@ -87,7 +87,7 @@ func (mh *messageHandler) getSentMessagesHandler() gin.HandlerFunc {
 
 func (mh *messageHandler) getReceivedMessagesHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		username, err := mh.accountHandler.confirmUserFromGinContext(c)
+		username, err := mh.accountHandler.ConfirmUserFromGinContext(c)
 		if err != nil {
 			returnError(c, err)
 			return

@@ -158,7 +158,7 @@ func (bh *bookHandler) deleteBookHandler() gin.HandlerFunc {
 
 func (bh *bookHandler) RoleRequirer(handler gin.HandlerFunc, roles []string) func(c *gin.Context) {
 	return func(c *gin.Context) {
-		username, err := bh.accountHandler.confirmUserFromGinContext(c)
+		username, err := bh.accountHandler.ConfirmUserFromGinContext(c)
 		if err != nil {
 			returnError(c, err)
 			c.Abort()
