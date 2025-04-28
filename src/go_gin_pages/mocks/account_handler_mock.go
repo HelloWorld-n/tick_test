@@ -17,6 +17,7 @@ type AccountRepositoryMock struct {
 	UpdateExistingAccountFn  func(string, *types.AccountPatchData) error
 	PromoteExistingAccountFn func(*types.AccountPatchPromoteData) error
 	FindUserRoleFn           func(string) (string, error)
+	FindPaginatedAccountsFn  func(page, size int) ([]types.AccountGetData, error)
 }
 
 func (arm *AccountRepositoryMock) EnsureDatabaseIsOK(fn func(*gin.Context)) func(c *gin.Context) {
@@ -57,4 +58,11 @@ func (arm *AccountRepositoryMock) PromoteExistingAccount(obj *types.AccountPatch
 
 func (arm *AccountRepositoryMock) FindUserRole(username string) (string, error) {
 	return arm.FindUserRoleFn(username)
+}
+
+func (m *AccountRepositoryMock) FindPaginatedAccounts(page, size int) ([]types.AccountGetData, error) {
+	if m.FindPaginatedAccountsFn != nil {
+		return m.FindPaginatedAccountsFn(page, size)
+	}
+	return nil, nil
 }

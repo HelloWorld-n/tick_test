@@ -243,7 +243,7 @@ func (ah *accountHandler) PostAccountHandler() gin.HandlerFunc {
 
 func (ah *accountHandler) prepareAccount(route *gin.RouterGroup) {
 	route.GET("/all", ah.GetAllAccountsHandler())
-	route.GET("/", ah.GetPaginatedAccountsHandler())
+	route.GET("/", ah.getPaginatedAccountsHandler())
 	route.POST("/register", ah.PostAccountHandler())
 	route.POST("/login", ah.LoginHandler())
 	route.PATCH("/modify", ah.PatchAccountHandler())
