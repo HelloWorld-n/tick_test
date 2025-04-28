@@ -1,7 +1,6 @@
 package repository
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 
@@ -20,7 +19,7 @@ type AccountRepository interface {
 	ConfirmNoAdmins() (adminCount int, err error)
 	SaveAccount(obj *types.AccountPostData) (err error)
 	DeleteAccount(username string) error
-	UpdateExistingAccount(username string, obj *types.AccountPatchData) (err error)
+	UpdateExistingAccount(username string, obj *types.AccountPatchData) (rowsAffected int64, err error)
 	PromoteExistingAccount(obj *types.AccountPatchPromoteData) (err error)
 	FindUserRole(username string) (string, error)
 }
@@ -106,7 +105,7 @@ func (r *repo) ConfirmAccount(username string, password string) (err error) {
 	if err = rows.Err(); err != nil {
 		return
 	}
-	err = errors.New("unable to find user with given username")
+	err = fmt.Errorf("%w: unable to find user with given username", errDefs.ErrEntityNotFound)
 	return
 }
 
@@ -211,46 +210,42 @@ func (r *repo) DeleteAccount(username string) error {
 	return nil
 }
 
-func (r *repo) UpdateExistingAccount(username string, obj *types.AccountPatchData) (err error) {
+func (r *repo) UpdateExistingAccount(username string, obj *types.AccountPatchData) (rowsAffected int64, err error) {
 	// verify valid input
 	if err = validateCredential(obj.Username, "Username"); err != nil {
-		return
+		return 0, err
 	}
 	if err = validateCredential(obj.Password, "Password"); err != nil {
-		return
-	}
-	var count int
-	err = r.DB.Conn.QueryRow(`SELECT COUNT(*) FROM account WHERE username = $1`, username).Scan(&count)
-	if err != nil {
-		return err
-	}
-	if count == 0 {
-		return fmt.Errorf("%w: no account found with the specified username", errDefs.ErrConflict)
+		return 0, err
 	}
 	if obj.Password != obj.SamePassword {
-		return fmt.Errorf("%w: field `Password` differs from field `SamePassword`", errDefs.ErrBadRequest)
+		return 0, fmt.Errorf("%w: field `Password` differs from field `SamePassword`", errDefs.ErrBadRequest)
 	}
 	if obj.Password != "" && len(obj.Password) < 8 {
-		return fmt.Errorf("%w: field `Password` is too short; excepted lenght at least 8", errDefs.ErrBadRequest)
+		return 0, fmt.Errorf("%w: field `Password` is too short; excepted lenght at least 8", errDefs.ErrBadRequest)
 	}
 
 	// apply changes
 	if obj.Password != "" {
 		hashedPassword, err := hashPassword(obj.Password)
 		if err != nil {
-			return err
+			return 0, err
 		}
 		_, err = r.DB.Conn.Exec(`UPDATE account SET password = $1 WHERE username = $2`, hashedPassword, username)
 		if err != nil {
-			return err
+			return 0, err
 		}
 	}
 	if obj.Username != "" && obj.Username != username {
-		_, err = r.DB.Conn.Exec(`UPDATE account SET username = $1 WHERE username = $2`, obj.Username, username)
-		logrus.Info("account ", username, " changed to ", obj.Username)
+		sqlResult, err := r.DB.Conn.Exec(`UPDATE account SET username = $1 WHERE username = $2`, obj.Username, username)
 		if err != nil {
-			return err
+			return 0, err
 		}
+		rowsAffected, _ = sqlResult.RowsAffected()
+		if rowsAffected == 0 {
+			return rowsAffected, fmt.Errorf("%w: no account found with the specified username", errDefs.ErrEntityNotFound)
+		}
+		return rowsAffected, nil
 	}
 	return
 }
