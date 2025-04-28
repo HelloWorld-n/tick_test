@@ -8,15 +8,14 @@ import (
 	"tick_test/types"
 	errDefs "tick_test/utils/errDefs"
 
-	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type AccountRepository interface {
-	EnsureDatabaseIsOK(fn func(*gin.Context)) func(c *gin.Context)
 	UserExists(username string) (exists bool, err error)
 	ConfirmAccount(username string, password string) (err error)
 	FindAllAccounts() (data []types.AccountGetData, err error)
+	FindPaginatedAccounts(pageSize int, pageNumber int) (accounts []types.AccountGetData, err error)
 	ConfirmNoAdmins() (adminCount int, err error)
 	SaveAccount(obj *types.AccountPostData) (err error)
 	DeleteAccount(username string) error
@@ -52,6 +51,41 @@ func (r *repo) UserExists(username string) (exists bool, err error) {
 		return false, fmt.Errorf("error checking user existence: %w", err)
 	}
 	return exists, nil
+}
+
+func (r *repo) FindPaginatedAccounts(pageSize int, pageNumber int) (accounts []types.AccountGetData, err error) {
+	if r.DB.Conn == nil {
+		err = errDefs.ErrDatabaseOffline
+		return
+	}
+
+	offset := (pageNumber - 1) * pageSize
+	if pageNumber < 1 {
+		return nil, fmt.Errorf("%w: parameter pageNumber needs to be 1 or greater but it is %v", errDefs.ErrBadRequest, pageNumber)
+	}
+	if pageSize < 1 {
+		return nil, fmt.Errorf("%w: parameter pageSize needs to be 1 or greater but it is %v", errDefs.ErrBadRequest, pageSize)
+	}
+
+	query := `SELECT 
+		username, 
+		(SELECT name FROM role WHERE acc.role_id = id)
+	FROM account acc ORDER BY id LIMIT $1 OFFSET $2`
+	rows, err := r.DB.Conn.Query(query, pageSize, offset)
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	accounts = make([]types.AccountGetData, 0)
+	for rows.Next() {
+		var account types.AccountGetData
+		if err := rows.Scan(&account.Username, &account.Role); err != nil {
+			return nil, err
+		}
+		accounts = append(accounts, account)
+	}
+	return accounts, nil
 }
 
 func (r *repo) ConfirmAccount(username string, password string) (err error) {

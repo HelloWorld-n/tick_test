@@ -8,12 +8,9 @@ import (
 	"sync"
 	"tick_test/types"
 	"time"
-
-	"github.com/gin-gonic/gin"
 )
 
 type ManipulatorRepository interface {
-	EnsureDatabaseIsOK(fn func(*gin.Context)) func(c *gin.Context)
 	IsDatabaseEnabled() bool
 	ApplyUpdateToIterationManipulator(data UpdateIterationManipulatorData, v *IterationManipulator) (dur time.Duration, err error)
 	LoadIterationManipulatorsFromFile() error

@@ -4,12 +4,9 @@ import (
 	"fmt"
 	"tick_test/types"
 	errDefs "tick_test/utils/errDefs"
-
-	"github.com/gin-gonic/gin"
 )
 
 type BookRepository interface {
-	EnsureDatabaseIsOK(fn func(*gin.Context)) func(c *gin.Context)
 	FindAllBooks() (books []types.Book, err error)
 	FindPaginatedBooks(pageSize int, pageNumber int) (books []types.Book, err error)
 	FindBookByCode(code string) (book types.Book, err error)
@@ -48,6 +45,12 @@ func (r *repo) FindPaginatedBooks(pageSize int, pageNumber int) (books []types.B
 	}
 
 	offset := (pageNumber - 1) * pageSize
+	if pageNumber < 1 {
+		return nil, fmt.Errorf("%w: parameter pageNumbers needs to be 1 or greater but it is %v", errDefs.ErrBadRequest, pageNumber)
+	}
+	if pageSize < 1 {
+		return nil, fmt.Errorf("%w: parameter pageSize needs to be 1 or greater but it is %v", errDefs.ErrBadRequest, pageSize)
+	}
 
 	query := `SELECT code, title, author FROM book ORDER BY id LIMIT $1 OFFSET $2`
 	rows, err := r.DB.Conn.Query(query, pageSize, offset)

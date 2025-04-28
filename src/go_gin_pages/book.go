@@ -198,10 +198,10 @@ func (bh *bookHandler) requireBookKeeperRole(handler gin.HandlerFunc) gin.Handle
 }
 
 func (bh *bookHandler) prepareBook(route *gin.RouterGroup) {
-	route.GET("/all", bh.repo.EnsureDatabaseIsOK(bh.GetAllBooksHandler()))
-	route.GET("/", bh.repo.EnsureDatabaseIsOK(bh.GetPaginatedBooksHandler()))
-	route.GET("/code/:code", bh.repo.EnsureDatabaseIsOK(bh.GetBookHandler()))
-	route.POST("/create", bh.repo.EnsureDatabaseIsOK(bh.requireBookKeeperRole(bh.PostBookHandler())))
-	route.PATCH("/code/:code", bh.repo.EnsureDatabaseIsOK(bh.requireBookKeeperRole(bh.PatchBookHandler())))
-	route.DELETE("/code/:code", bh.repo.EnsureDatabaseIsOK(bh.requireBookKeeperRole(bh.DeleteBookHandler())))
+	route.GET("/all", bh.GetAllBooksHandler())
+	route.GET("/", bh.GetPaginatedBooksHandler())
+	route.GET("/code/:code", bh.GetBookHandler())
+	route.POST("/create", bh.requireBookKeeperRole(bh.PostBookHandler()))
+	route.PATCH("/code/:code", bh.requireBookKeeperRole(bh.PatchBookHandler()))
+	route.DELETE("/code/:code", bh.requireBookKeeperRole(bh.DeleteBookHandler()))
 }
