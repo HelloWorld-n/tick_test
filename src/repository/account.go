@@ -60,6 +60,12 @@ func (r *repo) FindPaginatedAccounts(pageSize int, pageNumber int) (accounts []t
 	}
 
 	offset := (pageNumber - 1) * pageSize
+	if pageNumber < 1 {
+		return nil, fmt.Errorf("%w: parameter pageNumber needs to be 1 or greater but it is %v", errDefs.ErrBadRequest, pageNumber)
+	}
+	if pageSize < 1 {
+		return nil, fmt.Errorf("%w: parameter pageSize needs to be 1 or greater but it is %v", errDefs.ErrBadRequest, pageSize)
+	}
 
 	query := `SELECT 
 		username, 
