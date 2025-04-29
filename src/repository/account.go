@@ -40,8 +40,11 @@ func hashPassword(password string) (string, error) {
 }
 
 func confirmPassword(password string, hash string) (err error) {
-	err = fmt.Errorf("%w: %v", errDefs.ErrUnauthorized, bcrypt.CompareHashAndPassword([]byte(hash), []byte(password)))
-	return
+	bycryptErr := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+	if bycryptErr != nil {
+		return fmt.Errorf("%w: %v", errDefs.ErrUnauthorized, bycryptErr)
+	}
+	return nil
 }
 
 func (r *repo) UserExists(username string) (exists bool, err error) {
