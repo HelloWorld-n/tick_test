@@ -68,12 +68,12 @@ func (ah *accountHandler) PatchPromoteAccountHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// verify privileges
 		claims, err := ah.ConfirmAccountFromGinContext(c)
+		if err != nil {
+			returnError(c, fmt.Errorf("%w: %v", errDefs.ErrUnauthorized, err))
+		}
 		if claims.Role != "Admin" {
 			returnError(c, fmt.Errorf("%w: only admin can modify roles", errDefs.ErrUnauthorized))
 			return
-		}
-		if err != nil {
-			returnError(c, fmt.Errorf("%w: %v", errDefs.ErrUnauthorized, err))
 		}
 
 		var data types.AccountPatchPromoteData
