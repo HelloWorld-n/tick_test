@@ -31,6 +31,10 @@ func GenerateToken(username string, role string, duration time.Duration) (string
 		return "", errors.New("role cannot be empty")
 	}
 
+	if secretKey == nil {
+		return "", errors.New("secret key is not set")
+	}
+
 	now := time.Now()
 	claims := jwt.MapClaims{
 		"username": username,

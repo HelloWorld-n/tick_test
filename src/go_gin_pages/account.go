@@ -217,8 +217,6 @@ func (ah *accountHandler) LoginHandler() gin.HandlerFunc {
 			return
 		}
 		c.JSON(http.StatusOK, token)
-
-		c.JSON(http.StatusOK, generateToken(username))
 	}
 }
 

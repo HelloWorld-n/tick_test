@@ -18,6 +18,38 @@ const (
 	testSecret    = "test-secret-key-for-jwt-unit-tests"
 )
 
+func TestGenerateToken_UnsetSecretKey(t *testing.T) {
+	originalKey := jwtpkg.GetSecretKey()
+	defer jwtpkg.SetSecretKey(originalKey)
+
+	jwtpkg.SetSecretKey(nil)
+
+	token, err := jwtpkg.GenerateToken(testUsername, testRole, time.Hour)
+	if err == nil {
+		t.Fatalf("Expected error when secret key is unset, got no error")
+	}
+	if token != "" {
+		t.Errorf("Expected empty token when secret key is unset, got %q", token)
+	}
+}
+
+func TestValidateToken_UnsetSecretKey(t *testing.T) {
+	originalKey := jwtpkg.GetSecretKey()
+	defer jwtpkg.SetSecretKey(originalKey)
+
+	jwtpkg.SetSecretKey([]byte(testSecret))
+	token, err := jwtpkg.GenerateToken(testUsername, testRole, time.Hour)
+	if err != nil {
+		t.Fatalf("GenerateToken() error = %v, expected no error", err)
+	}
+
+	jwtpkg.SetSecretKey(nil)
+	_, err = jwtpkg.ValidateToken(token)
+	if err == nil {
+		t.Fatalf("Expected error when secret key is unset during token validation, got no error")
+	}
+}
+
 func createTestToken(t *testing.T, username, role string, expireIn time.Duration) string {
 	t.Helper()
 	claims := jwt.MapClaims{
