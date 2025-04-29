@@ -70,6 +70,7 @@ func (ah *accountHandler) PatchPromoteAccountHandler() gin.HandlerFunc {
 		claims, err := ah.ConfirmAccountFromGinContext(c)
 		if err != nil {
 			returnError(c, fmt.Errorf("%w: %v", errDefs.ErrUnauthorized, err))
+			return
 		}
 		if claims.Role != "Admin" {
 			returnError(c, fmt.Errorf("%w: only admin can modify roles", errDefs.ErrUnauthorized))
@@ -197,6 +198,18 @@ func (ah *accountHandler) LoginHandler() gin.HandlerFunc {
 			returnError(c, err)
 			return
 		}
+		role, err := ah.repo.FindUserRole(username)
+		if err != nil {
+			returnError(c, err)
+			return
+		}
+		token, err := jwt.GenerateToken(username, role, 30*time.Minute)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Token generation error"})
+			return
+		}
+		c.JSON(http.StatusOK, token)
+
 		c.JSON(http.StatusOK, generateToken(username))
 	}
 }
