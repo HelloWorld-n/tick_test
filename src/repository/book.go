@@ -45,6 +45,12 @@ func (r *repo) FindPaginatedBooks(pageSize int, pageNumber int) (books []types.B
 	}
 
 	offset := (pageNumber - 1) * pageSize
+	if pageNumber < 1 {
+		return nil, fmt.Errorf("%w: parameter pageNumbers needs to be 1 or greater but it is %v", errDefs.ErrBadRequest, pageNumber)
+	}
+	if pageSize < 1 {
+		return nil, fmt.Errorf("%w: parameter pageSize needs to be 1 or greater but it is %v", errDefs.ErrBadRequest, pageSize)
+	}
 
 	query := `SELECT code, title, author FROM book ORDER BY id LIMIT $1 OFFSET $2`
 	rows, err := r.DB.Conn.Query(query, pageSize, offset)

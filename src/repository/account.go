@@ -40,8 +40,11 @@ func hashPassword(password string) (string, error) {
 }
 
 func confirmPassword(password string, hash string) (err error) {
-	err = bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
-	return
+	bycryptErr := bcrypt.CompareHashAndPassword([]byte(hash), []byte(password))
+	if bycryptErr != nil {
+		return fmt.Errorf("%w: %v", errDefs.ErrUnauthorized, bycryptErr)
+	}
+	return nil
 }
 
 func (r *repo) UserExists(username string) (exists bool, err error) {
@@ -60,6 +63,12 @@ func (r *repo) FindPaginatedAccounts(pageSize int, pageNumber int) (accounts []t
 	}
 
 	offset := (pageNumber - 1) * pageSize
+	if pageNumber < 1 {
+		return nil, fmt.Errorf("%w: parameter pageNumber needs to be 1 or greater but it is %v", errDefs.ErrBadRequest, pageNumber)
+	}
+	if pageSize < 1 {
+		return nil, fmt.Errorf("%w: parameter pageSize needs to be 1 or greater but it is %v", errDefs.ErrBadRequest, pageSize)
+	}
 
 	query := `
 		SELECT 
@@ -290,7 +299,8 @@ func (r *repo) doPostgresPreparationForAccount() {
 	if r.DB.Conn != nil {
 		_, err := r.DB.Conn.Exec(`
 			CREATE TABLE IF NOT EXISTS account (
-				username varchar(100) PRIMARY KEY,
+				id SERIAL PRIMARY KEY,
+				username varchar(100) UNIQUE NOT NULL,
 				password varchar(500) NOT NULL
 			);
 		`)
@@ -309,37 +319,6 @@ func (r *repo) doPostgresPreparationForAccount() {
 				('Admin')
 			ON CONFLICT (name) DO NOTHING;
 		`)
-		logPossibleError(err)
-		_, err = r.DB.Conn.Exec(`
-			ALTER TABLE account ADD COLUMN IF NOT EXISTS role_id INT REFERENCES role(id);
-		`)
-		logPossibleError(err)
-		_, err = r.DB.Conn.Exec(`
-			UPDATE account
-			SET role_id = (SELECT id FROM role WHERE name = 'User')
-			WHERE role_id IS NULL;
-		`)
-		logPossibleError(err)
-		_, err = r.DB.Conn.Exec(`
-			ALTER TABLE account
-			ALTER COLUMN role_id SET NOT NULL;
-		`)
-		logPossibleError(err)
-		_, err = r.DB.Conn.Exec(`
-			ALTER TABLE account ADD COLUMN IF NOT EXISTS id SERIAL;
-		`)
-		logPossibleError(err)
-		_, err = r.DB.Conn.Exec(`
-			ALTER TABLE account DROP CONSTRAINT IF EXISTS account_pkey;
-		`)
-		logPossibleError(err)
-		_, err = r.DB.Conn.Exec(`
-			ALTER TABLE account ADD PRIMARY KEY (id);
-		`)
-		logPossibleError(err)
-		_, err = r.DB.Conn.Exec(`
-			ALTER TABLE account ADD CONSTRAINT unique_username UNIQUE(username);
-		`)
-		logPossibleError(err)
+    logPossibleError(err)
 	}
 }

@@ -66,10 +66,10 @@ func (ah *accountHandler) getPaginatedAccountsHandler() gin.HandlerFunc {
 	}
 }
 
-func (ah *accountHandler) patchPromoteAccountHandler() gin.HandlerFunc {
+func (ah *accountHandler) PatchPromoteAccountHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// verify privileges
-		_, role, err := ah.confirmAccountFromGinContext(c)
+		_, role, err := ah.ConfirmAccountFromGinContext(c)
 		if role != "Admin" {
 			returnError(c, fmt.Errorf("%w: only admin can modify roles", errDefs.ErrUnauthorized))
 			return
@@ -82,7 +82,7 @@ func (ah *accountHandler) patchPromoteAccountHandler() gin.HandlerFunc {
 		// apply changes
 		var data = new(types.AccountPatchPromoteData)
 		if err := c.ShouldBindJSON(data); err != nil {
-			returnError(c, err)
+			returnError(c, fmt.Errorf("%w: invalid_json", errDefs.ErrBadRequest))
 			return
 		}
 		ah.repo.PromoteExistingAccount(data)
@@ -90,9 +90,9 @@ func (ah *accountHandler) patchPromoteAccountHandler() gin.HandlerFunc {
 	}
 }
 
-func (ah *accountHandler) patchAccountHandler() gin.HandlerFunc {
+func (ah *accountHandler) PatchAccountHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		username, err := ah.confirmUserFromGinContext(c)
+		username, err := ah.ConfirmUserFromGinContext(c)
 		if err != nil {
 			returnError(c, err)
 			return
@@ -114,7 +114,7 @@ func (ah *accountHandler) patchAccountHandler() gin.HandlerFunc {
 	}
 }
 
-func (ah *accountHandler) deleteAccountHandler() gin.HandlerFunc {
+func (ah *accountHandler) DeleteAccountHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		username := c.GetHeader("Username")
 
@@ -128,7 +128,7 @@ func (ah *accountHandler) deleteAccountHandler() gin.HandlerFunc {
 			return
 		}
 
-		username, err = ah.confirmUserFromGinContext(c)
+		username, err = ah.ConfirmUserFromGinContext(c)
 		if err != nil {
 			returnError(c, err)
 			return
@@ -169,7 +169,7 @@ func confirmToken(val string) (username string, err error) {
 	return info.Username, nil
 }
 
-func (ah *accountHandler) confirmUserFromGinContext(c *gin.Context) (username string, err error) {
+func (ah *accountHandler) ConfirmUserFromGinContext(c *gin.Context) (username string, err error) {
 	if c.GetHeader("Password") != "" {
 		username = c.GetHeader("Username")
 		password := c.GetHeader("Password")
@@ -184,8 +184,8 @@ func (ah *accountHandler) confirmUserFromGinContext(c *gin.Context) (username st
 	return
 }
 
-func (ah *accountHandler) confirmAccountFromGinContext(c *gin.Context) (username string, role string, err error) {
-	username, err = ah.confirmUserFromGinContext(c)
+func (ah *accountHandler) ConfirmAccountFromGinContext(c *gin.Context) (username string, role string, err error) {
+	username, err = ah.ConfirmUserFromGinContext(c)
 	if err != nil {
 		return "", "", err
 	}
@@ -198,7 +198,7 @@ func (ah *accountHandler) confirmAccountFromGinContext(c *gin.Context) (username
 	return username, role, nil
 }
 
-func (ah *accountHandler) loginHandler() gin.HandlerFunc {
+func (ah *accountHandler) LoginHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		username := c.GetHeader("Username")
 		password := c.GetHeader("Password")
@@ -212,7 +212,7 @@ func (ah *accountHandler) loginHandler() gin.HandlerFunc {
 	}
 }
 
-func (ah *accountHandler) getAllAccountsHandler() gin.HandlerFunc {
+func (ah *accountHandler) GetAllAccountsHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		accounts, err := ah.repo.FindAllAccounts()
 		if err != nil {
@@ -223,7 +223,7 @@ func (ah *accountHandler) getAllAccountsHandler() gin.HandlerFunc {
 	}
 }
 
-func (ah *accountHandler) postAccountHandler() gin.HandlerFunc {
+func (ah *accountHandler) PostAccountHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var data types.AccountPostData
 		if err := c.ShouldBindJSON(&data); err != nil {
@@ -246,11 +246,11 @@ func (ah *accountHandler) postAccountHandler() gin.HandlerFunc {
 }
 
 func (ah *accountHandler) prepareAccount(route *gin.RouterGroup) {
-	route.GET("/all", ah.getAllAccountsHandler())
+	route.GET("/all", ah.GetAllAccountsHandler())
 	route.GET("/", ah.getPaginatedAccountsHandler())
-	route.POST("/register", ah.postAccountHandler())
-	route.POST("/login", ah.loginHandler())
-	route.PATCH("/modify", ah.patchAccountHandler())
-	route.PATCH("/promote", ah.patchPromoteAccountHandler())
-	route.DELETE("/delete", ah.deleteAccountHandler())
+	route.POST("/register", ah.PostAccountHandler())
+	route.POST("/login", ah.LoginHandler())
+	route.PATCH("/modify", ah.PatchAccountHandler())
+	route.PATCH("/promote", ah.PatchPromoteAccountHandler())
+	route.DELETE("/delete", ah.DeleteAccountHandler())
 }

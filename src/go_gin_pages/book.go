@@ -24,7 +24,7 @@ func NewBookHandler(bookRepo repository.BookRepository) (res *bookHandler) {
 	}
 }
 
-func (bh *bookHandler) getAllBooksHandler() gin.HandlerFunc {
+func (bh *bookHandler) GetAllBooksHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		books, err := bh.repo.FindAllBooks()
 		if err != nil {
@@ -35,7 +35,7 @@ func (bh *bookHandler) getAllBooksHandler() gin.HandlerFunc {
 	}
 }
 
-func (bh *bookHandler) getPaginatedBooksHandler() gin.HandlerFunc {
+func (bh *bookHandler) GetPaginatedBooksHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		pageSize, err := strconv.Atoi(c.Query("pageSize"))
 		if err != nil {
@@ -65,7 +65,7 @@ func (bh *bookHandler) getPaginatedBooksHandler() gin.HandlerFunc {
 	}
 }
 
-func (bh *bookHandler) getBookHandler() gin.HandlerFunc {
+func (bh *bookHandler) GetBookHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		code := c.Param("code")
 		book, err := bh.repo.FindBookByCode(code)
@@ -81,7 +81,7 @@ func (bh *bookHandler) getBookHandler() gin.HandlerFunc {
 	}
 }
 
-func (bh *bookHandler) postBookHandler() gin.HandlerFunc {
+func (bh *bookHandler) PostBookHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		var book types.Book
 		if err := c.ShouldBindJSON(&book); err != nil {
@@ -100,7 +100,6 @@ func (bh *bookHandler) postBookHandler() gin.HandlerFunc {
 			return
 		}
 
-
 		if err := bh.repo.CreateBook(&book); err != nil {
 			c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": "code already exists"})
 			return
@@ -110,13 +109,13 @@ func (bh *bookHandler) postBookHandler() gin.HandlerFunc {
 	}
 }
 
-func (bh *bookHandler) patchBookHandler() gin.HandlerFunc {
+func (bh *bookHandler) PatchBookHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		code := c.Param("code")
 
 		_, err := bh.repo.FindBookByCode(code)
 		if err != nil {
-			if err == sql.ErrNoRows {
+			if err.Error() == sql.ErrNoRows.Error() {
 				c.JSON(http.StatusConflict, gin.H{"Error": "book not found"})
 				return
 			}
@@ -140,13 +139,12 @@ func (bh *bookHandler) patchBookHandler() gin.HandlerFunc {
 	}
 }
 
-
-func (bh *bookHandler) deleteBookHandler() gin.HandlerFunc {
+func (bh *bookHandler) DeleteBookHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		code := c.Param("code")
 		rowsAffected, err := bh.repo.RemoveBookByCode(code)
 		if err != nil {
-      returnError(c, err)
+			returnError(c, err)
 			return
 		}
 
@@ -160,7 +158,7 @@ func (bh *bookHandler) deleteBookHandler() gin.HandlerFunc {
 
 func (bh *bookHandler) RoleRequirer(handler gin.HandlerFunc, roles []string) func(c *gin.Context) {
 	return func(c *gin.Context) {
-		username, err := bh.accountHandler.confirmUserFromGinContext(c)
+		username, err := bh.accountHandler.ConfirmUserFromGinContext(c)
 		if err != nil {
 			returnError(c, err)
 			c.Abort()
@@ -200,10 +198,10 @@ func (bh *bookHandler) requireBookKeeperRole(handler gin.HandlerFunc) gin.Handle
 }
 
 func (bh *bookHandler) prepareBook(route *gin.RouterGroup) {
-	route.GET("/all", bh.getAllBooksHandler())
-	route.GET("/", bh.getPaginatedBooksHandler())
-	route.GET("/code/:code", bh.getBookHandler())
-	route.POST("/create", bh.requireBookKeeperRole(bh.postBookHandler()))
-	route.PATCH("/code/:code", bh.requireBookKeeperRole(bh.patchBookHandler()))
-	route.DELETE("/code/:code", bh.requireBookKeeperRole(bh.deleteBookHandler()))
+	route.GET("/all", bh.GetAllBooksHandler())
+	route.GET("/", bh.GetPaginatedBooksHandler())
+	route.GET("/code/:code", bh.GetBookHandler())
+	route.POST("/create", bh.requireBookKeeperRole(bh.PostBookHandler()))
+	route.PATCH("/code/:code", bh.requireBookKeeperRole(bh.PatchBookHandler()))
+	route.DELETE("/code/:code", bh.requireBookKeeperRole(bh.DeleteBookHandler()))
 }
