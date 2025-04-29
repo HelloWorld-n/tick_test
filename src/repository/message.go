@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"tick_test/types"
 	"tick_test/utils/errDefs"
-
-	"github.com/sirupsen/logrus"
 )
 
 type MessageRepository interface {
