@@ -177,8 +177,8 @@ func TestPatchAccountHandler(t *testing.T) {
 				ConfirmAccountFn: func(string, string) error {
 					return nil
 				},
-				UpdateExistingAccountFn: func(string, *types.AccountPatchData) error {
-					return nil
+				UpdateExistingAccountFn: func(string, *types.AccountPatchData) (int64, error) {
+					return 1, nil
 				},
 			},
 			inputPayload:   `{"password":"NEW_PASSWORD","samePassword":"NEW_PASSWORD","email":"test@example.com"}`,

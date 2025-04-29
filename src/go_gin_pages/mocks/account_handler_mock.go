@@ -14,7 +14,7 @@ type AccountRepositoryMock struct {
 	ConfirmNoAdminsFn        func() (int, error)
 	SaveAccountFn            func(*types.AccountPostData) error
 	DeleteAccountFn          func(string) error
-	UpdateExistingAccountFn  func(string, *types.AccountPatchData) error
+	UpdateExistingAccountFn  func(string, *types.AccountPatchData) (int64, error)
 	PromoteExistingAccountFn func(*types.AccountPatchPromoteData) error
 	FindUserRoleFn           func(string) (string, error)
 	FindPaginatedAccountsFn  func(page, size int) ([]types.AccountGetData, error)
@@ -48,8 +48,8 @@ func (arm *AccountRepositoryMock) DeleteAccount(username string) error {
 	return arm.DeleteAccountFn(username)
 }
 
-func (arm *AccountRepositoryMock) UpdateExistingAccount(username string, obj *types.AccountPatchData) (err error) {
-	return arm.UpdateExistingAccountFn(username, obj)
+func (arm *AccountRepositoryMock) UpdateExistingAccount(username string, obj *types.AccountPatchData) (int64, error) {
+    return arm.UpdateExistingAccountFn(username, obj)
 }
 
 func (arm *AccountRepositoryMock) PromoteExistingAccount(obj *types.AccountPatchPromoteData) (err error) {
