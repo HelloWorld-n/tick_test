@@ -4,6 +4,8 @@ import (
 	"fmt"
 	"tick_test/types"
 	"tick_test/utils/errDefs"
+
+	"github.com/sirupsen/logrus"
 )
 
 type MessageRepository interface {
@@ -82,7 +84,7 @@ func (r *repo) FindMessages(username string, sent bool, recv bool) (msgs []types
 
 func (r *repo) doPostgresPreparationForMessages() {
 	if r.DB.Conn != nil {
-		result, err := r.DB.Conn.Exec(`
+		_, err := r.DB.Conn.Exec(`
 			CREATE TABLE IF NOT EXISTS messages (
 				id SERIAL PRIMARY KEY,
 				from_user BIGINT NOT NULL,
@@ -93,6 +95,6 @@ func (r *repo) doPostgresPreparationForMessages() {
 				FOREIGN KEY (to_user) REFERENCES account(id)
 			);
 		`)
-		fmt.Println(result, err)
+		logPossibleError(err)
 	}
 }

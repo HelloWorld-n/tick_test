@@ -13,6 +13,7 @@ import (
 	"time"
 
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 )
 
 type userTokenInfo struct {
@@ -101,10 +102,13 @@ func (ah *accountHandler) PatchAccountHandler() gin.HandlerFunc {
 			returnError(c, fmt.Errorf("%w: %v", errDefs.ErrBadRequest, err.Error()))
 			return
 		}
-		err = ah.repo.UpdateExistingAccount(username, data)
+		rows, err := ah.repo.UpdateExistingAccount(username, data)
 		if err != nil {
 			returnError(c, err)
 			return
+		}
+		if rows > 0 {
+			logrus.Info("account ", username, " changed to ", data.Username)
 		}
 		c.JSON(http.StatusOK, nil)
 	}
