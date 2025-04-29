@@ -295,7 +295,8 @@ func (r *repo) doPostgresPreparationForAccount() {
 	if r.DB.Conn != nil {
 		result, err := r.DB.Conn.Exec(`
 			CREATE TABLE IF NOT EXISTS account (
-				username varchar(100) PRIMARY KEY,
+				id SERIAL PRIMARY KEY,
+				username varchar(100) UNIQUE NOT NULL,
 				password varchar(500) NOT NULL
 			);
 		`)
@@ -313,37 +314,6 @@ func (r *repo) doPostgresPreparationForAccount() {
 				('BookKeeper'),
 				('Admin')
 			ON CONFLICT (name) DO NOTHING;
-		`)
-		fmt.Println(result, err)
-		result, err = r.DB.Conn.Exec(`
-			ALTER TABLE account ADD COLUMN IF NOT EXISTS role_id INT REFERENCES role(id);
-		`)
-		fmt.Println(result, err)
-		result, err = r.DB.Conn.Exec(`
-			UPDATE account
-			SET role_id = (SELECT id FROM role WHERE name = 'User')
-			WHERE role_id IS NULL;
-		`)
-		fmt.Println(result, err)
-		result, err = r.DB.Conn.Exec(`
-			ALTER TABLE account
-			ALTER COLUMN role_id SET NOT NULL;
-		`)
-		fmt.Println(result, err)
-		result, err = r.DB.Conn.Exec(`
-			ALTER TABLE account ADD COLUMN IF NOT EXISTS id SERIAL;
-		`)
-		fmt.Println(result, err)
-		result, err = r.DB.Conn.Exec(`
-			ALTER TABLE account DROP CONSTRAINT IF EXISTS account_pkey;
-		`)
-		fmt.Println(result, err)
-		result, err = r.DB.Conn.Exec(`
-			ALTER TABLE account ADD PRIMARY KEY (id);
-		`)
-		fmt.Println(result, err)
-		result, err = r.DB.Conn.Exec(`
-			ALTER TABLE account ADD CONSTRAINT unique_username UNIQUE(username);
 		`)
 		fmt.Println(result, err)
 	}

@@ -85,73 +85,14 @@ func (r *repo) doPostgresPreparationForMessages() {
 		result, err := r.DB.Conn.Exec(`
 			CREATE TABLE IF NOT EXISTS messages (
 				id SERIAL PRIMARY KEY,
-				from_user VARCHAR(100) NOT NULL,
-				to_user VARCHAR(100) NOT NULL,
+				from_user BIGINT NOT NULL,
+				to_user BIGINT NOT NULL,
 				content TEXT NOT NULL, 
 				created_at varchar(30) NOT NULL,
-				FOREIGN KEY (from_user) REFERENCES account(username),
-				FOREIGN KEY (to_user) REFERENCES account(username)
+				FOREIGN KEY (from_user) REFERENCES account(id),
+				FOREIGN KEY (to_user) REFERENCES account(id)
 			);
 		`)
 		fmt.Println(result, err)
-
-		var columnType string
-		err = r.DB.Conn.QueryRow(`
-			SELECT data_type 
-			FROM information_schema.columns 
-			WHERE table_name = 'messages' AND column_name = 'from_user';
-		`).Scan(&columnType)
-		if err != nil {
-			fmt.Println("Error querying column type:", err)
-			return
-		}
-		if columnType == "character varying" {
-			fmt.Println(result, err)
-			res, err := r.DB.Conn.Exec(`
-				ALTER TABLE messages ADD COLUMN IF NOT EXISTS from_id INT;
-			`)
-			fmt.Println(res, err)
-
-			res, err = r.DB.Conn.Exec(`
-				ALTER TABLE messages ADD COLUMN IF NOT EXISTS to_id INT;
-			`)
-			fmt.Println(res, err)
-
-			res, err = r.DB.Conn.Exec(`
-				UPDATE messages SET from_id = (
-					SELECT id FROM account WHERE account.username = messages.from_user
-				);
-			`)
-			fmt.Println(res, err)
-
-			res, err = r.DB.Conn.Exec(`
-				UPDATE messages SET to_id = (
-					SELECT id FROM account WHERE account.username = messages.to_user
-				);
-			`)
-			fmt.Println(res, err)
-
-			res, err = r.DB.Conn.Exec(`ALTER TABLE messages DROP CONSTRAINT IF EXISTS messages_from_user_fkey;`)
-			fmt.Println(res, err)
-			res, err = r.DB.Conn.Exec(`ALTER TABLE messages DROP CONSTRAINT IF EXISTS messages_to_user_fkey;`)
-			fmt.Println(res, err)
-
-			res, err = r.DB.Conn.Exec(`ALTER TABLE messages DROP COLUMN IF EXISTS from_user;`)
-			fmt.Println(res, err)
-			res, err = r.DB.Conn.Exec(`ALTER TABLE messages DROP COLUMN IF EXISTS to_user;`)
-			fmt.Println(res, err)
-
-			res, err = r.DB.Conn.Exec(`ALTER TABLE messages RENAME COLUMN from_id TO from_user;`)
-			fmt.Println(res, err)
-			res, err = r.DB.Conn.Exec(`ALTER TABLE messages RENAME COLUMN to_id TO to_user;`)
-			fmt.Println(res, err)
-
-			res, err = r.DB.Conn.Exec(`
-				ALTER TABLE messages 
-				ADD CONSTRAINT messages_from_user_fk FOREIGN KEY (from_user) REFERENCES account(id),
-				ADD CONSTRAINT messages_to_user_fk FOREIGN KEY (to_user) REFERENCES account(id);
-			`)
-			fmt.Println(res, err)
-		}
 	}
 }
