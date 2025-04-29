@@ -166,28 +166,36 @@ func confirmToken(val string) (string, error) {
 	return info.Username, nil
 }
 
+func (ah *accountHandler) tokenAuth(c *gin.Context) (jwt.Claims, error) {
+	token := c.GetHeader("User-Token")
+	if token == "" {
+		return jwt.Claims{}, fmt.Errorf("%w: no token provided", errDefs.ErrUnauthorized)
+	}
+	claims, err := jwt.ValidateToken(token)
+	if err != nil {
+		return jwt.Claims{}, fmt.Errorf("%w: %v", errDefs.ErrUnauthorized, err.Error())
+	}
+	return claims, nil
+}
+
+func (ah *accountHandler) passwordAuth(c *gin.Context) (jwt.Claims, error) {
+	username := c.GetHeader("Username")
+	password := c.GetHeader("Password")
+	if err := ah.repo.ConfirmAccount(username, password); err != nil {
+		return jwt.Claims{}, fmt.Errorf("%w: invalid credentials", errDefs.ErrUnauthorized)
+	}
+	role, err := ah.repo.FindUserRole(username)
+	if err != nil {
+		return jwt.Claims{}, fmt.Errorf("error retrieving user role: %w", err)
+	}
+	return jwt.Claims{Username: username, Role: role}, nil
+}
+
 func (ah *accountHandler) ConfirmAccountFromGinContext(c *gin.Context) (jwt.Claims, error) {
 	if c.GetHeader("Password") != "" {
-		username := c.GetHeader("Username")
-		password := c.GetHeader("Password")
-		err := ah.repo.ConfirmAccount(username, password)
-		if err != nil {
-			return jwt.Claims{}, fmt.Errorf("%w: %v", errDefs.ErrUnauthorized, "invalid credentials")
-		}
-		role, _ := ah.repo.FindUserRole(username)
-		return jwt.Claims{
-			Username: username,
-			Role:     role,
-		}, err
+		return ah.passwordAuth(c)
 	}
-	if token := c.GetHeader("User-Token"); token != "" {
-		claims, err := jwt.ValidateToken(token)
-		if err != nil {
-			return jwt.Claims{}, fmt.Errorf("%w: %v", errDefs.ErrUnauthorized, err.Error())
-		}
-		return claims, nil
-	}
-	return jwt.Claims{}, fmt.Errorf("%w: no token provided", errDefs.ErrUnauthorized)
+	return ah.tokenAuth(c)
 }
 
 func (ah *accountHandler) LoginHandler() gin.HandlerFunc {

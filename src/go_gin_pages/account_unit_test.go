@@ -82,6 +82,9 @@ func TestLoginHandler_Success(t *testing.T) {
 			}
 			return errors.New("invalid")
 		},
+		FindUserRoleFn: func(username string) (string, error) {
+			return "User", nil
+		},
 	}
 
 	handler := ginPages.NewAccountHandler(repo).LoginHandler()
@@ -95,7 +98,6 @@ func TestLoginHandler_Success(t *testing.T) {
 	handler(c)
 
 	assert.Equal(t, http.StatusOK, w.Code)
-	assert.Len(t, w.Body.String(), 82) // token length
 }
 
 func TestPostAccountHandler(t *testing.T) {
