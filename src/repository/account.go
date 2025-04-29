@@ -4,9 +4,11 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"tick_test/types"
 	errDefs "tick_test/utils/errDefs"
+	"tick_test/utils/jwt"
 
 	"golang.org/x/crypto/bcrypt"
 )
@@ -14,6 +16,7 @@ import (
 type AccountRepository interface {
 	UserExists(username string) (exists bool, err error)
 	ConfirmAccount(username string, password string) (err error)
+	ConfirmAccountJwt(username string, password string) (token string, err error)
 	FindAllAccounts() (data []types.AccountGetData, err error)
 	FindPaginatedAccounts(pageSize int, pageNumber int) (accounts []types.AccountGetData, err error)
 	ConfirmNoAdmins() (adminCount int, err error)
@@ -22,6 +25,9 @@ type AccountRepository interface {
 	UpdateExistingAccount(username string, obj *types.AccountPatchData) (err error)
 	PromoteExistingAccount(obj *types.AccountPatchPromoteData) (err error)
 	FindUserRole(username string) (string, error)
+	ValidateToken(token string) (jwt.Claims, error)
+	GenerateTokenForUser(username string) (token string, err error)
+	IsAdmin(token string) (bool, error)
 }
 
 func validateCredential(cred string, credName string) (err error) {
@@ -114,6 +120,55 @@ func (r *repo) ConfirmAccount(username string, password string) (err error) {
 	}
 	err = errors.New("unable to find user with given username")
 	return
+}
+
+func (r *repo) ConfirmAccountJwt(username string, password string) (token string, err error) {
+	err = r.ConfirmAccount(username, password)
+	if err != nil {
+		return "", err
+	}
+
+	role, err := r.FindUserRole(username)
+	if err != nil {
+		return "", fmt.Errorf("error getting user role: %w", err)
+	}
+
+	token, err = jwt.GenerateToken(username, role, 30*time.Minute)
+	if err != nil {
+		return "", fmt.Errorf("error generating token: %w", err)
+	}
+
+	return token, nil
+}
+
+func (r *repo) GenerateTokenForUser(username string) (token string, err error) {
+	exists, err := r.UserExists(username)
+	if err != nil {
+		return "", err
+	}
+	if !exists {
+		return "", fmt.Errorf("%w: user with username %s does not exist", errDefs.ErrBadRequest, username)
+	}
+
+	role, err := r.FindUserRole(username)
+	if err != nil {
+		return "", fmt.Errorf("error getting user role: %w", err)
+	}
+
+	token, err = jwt.GenerateToken(username, role, 30*time.Minute)
+	if err != nil {
+		return "", fmt.Errorf("error generating token: %w", err)
+	}
+
+	return token, nil
+}
+
+func (r *repo) ValidateToken(token string) (jwt.Claims, error) {
+	return jwt.ValidateToken(token)
+}
+
+func (r *repo) IsAdmin(token string) (bool, error) {
+	return jwt.IsAdmin(token)
 }
 
 func (r *repo) FindAllAccounts() (data []types.AccountGetData, err error) {

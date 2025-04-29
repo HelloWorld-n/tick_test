@@ -158,23 +158,16 @@ func (bh *bookHandler) DeleteBookHandler() gin.HandlerFunc {
 
 func (bh *bookHandler) RoleRequirer(handler gin.HandlerFunc, roles []string) func(c *gin.Context) {
 	return func(c *gin.Context) {
-		username, err := bh.accountHandler.ConfirmUserFromGinContext(c)
+		claims, err := bh.accountHandler.ConfirmAccountFromGinContext(c)
 		if err != nil {
 			returnError(c, err)
 			c.Abort()
 			return
 		}
 
-		userRole, err := bh.accountHandler.repo.FindUserRole(username)
-		if err != nil {
-			returnError(c, fmt.Errorf("%w:failed to retrive user role", err))
-			c.Abort()
-			return
-		}
-
 		authorized := false
 		for _, role := range roles {
-			if role == userRole {
+			if role == claims.Role {
 				authorized = true
 				break
 			}
