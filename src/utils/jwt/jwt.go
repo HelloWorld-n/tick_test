@@ -5,11 +5,13 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt/v5"
+
+	"tick_test/types"
 )
 
 type Claims struct {
 	Username string
-	Role     string
+	Role     types.Role
 }
 
 var secretKey []byte
@@ -22,7 +24,7 @@ func GetSecretKey() []byte {
 	return secretKey
 }
 
-func GenerateToken(username string, role string, duration time.Duration) (string, error) {
+func GenerateToken(username string, role types.Role, duration time.Duration) (string, error) {
 	if username == "" {
 		return "", errors.New("username cannot be empty")
 	}
@@ -90,7 +92,7 @@ func ValidateToken(tokenString string) (Claims, error) {
 	}
 
 	claims.Username = username
-	claims.Role = role
+	claims.Role = types.Role(role)
 
 	return claims, nil
 }
@@ -124,7 +126,7 @@ func GetUserFromToken(tokenString string) (string, error) {
 	return username, nil
 }
 
-func GetRoleFromToken(tokenString string) (string, error) {
+func GetRoleFromToken(tokenString string) (types.Role, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, errors.New("invalid token signing method")
@@ -145,7 +147,8 @@ func GetRoleFromToken(tokenString string) (string, error) {
 		return "", errors.New("invalid token claims")
 	}
 
-	role, ok := mapClaims["role"].(string)
+	strRole, ok := mapClaims["role"].(string)
+	role := types.Role(strRole)
 	if !ok {
 		return "", errors.New("missing or invalid role claim")
 	}

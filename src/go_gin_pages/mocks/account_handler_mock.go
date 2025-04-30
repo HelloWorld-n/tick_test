@@ -8,21 +8,22 @@ import (
 )
 
 type AccountRepositoryMock struct {
-	EnsureDatabaseIsOkFn     func(func(*gin.Context)) func(*gin.Context)
-	UserExistsFn             func(string) (bool, error)
-	ConfirmAccountFn         func(string, string) error
-	ConfirmAccountJwtFn      func(string, string) (string, error)
-	FindAllAccountsFn        func() ([]types.AccountGetData, error)
-	FindPaginatedAccountsFn  func(pageSize, pageNumber int) ([]types.AccountGetData, error)
-	ConfirmNoAdminsFn        func() (int, error)
-	SaveAccountFn            func(*types.AccountPostData) error
-	DeleteAccountFn          func(string) error
-	UpdateExistingAccountFn  func(string, *types.AccountPatchData) error
-	PromoteExistingAccountFn func(*types.AccountPatchPromoteData) error
-	FindUserRoleFn           func(string) (string, error)
-	ValidateTokenFn          func(string) (jwt.Claims, error)
-	GenerateTokenForUserFn   func(string) (string, error)
-	IsAdminFn                func(string) (bool, error)
+	EnsureDatabaseIsOkFn      func(func(*gin.Context)) func(*gin.Context)
+	UserExistsFn              func(string) (bool, error)
+	ConfirmAccountFn          func(string, string) error
+	ConfirmAccountJwtFn       func(string, string) (string, error)
+	FindAccountIdByUsernameFn func(username string) (int64, error)
+	FindAllAccountsFn         func() ([]types.AccountGetData, error)
+	FindPaginatedAccountsFn   func(pageSize, pageNumber int) ([]types.AccountGetData, error)
+	ConfirmNoAdminsFn         func() (int, error)
+	SaveAccountFn             func(*types.AccountPostData) error
+	DeleteAccountFn           func(string) error
+	UpdateExistingAccountFn   func(string, *types.AccountPatchData) error
+	PromoteExistingAccountFn  func(*types.AccountPatchPromoteData) error
+	FindUserRoleFn            func(string) (types.Role, error)
+	ValidateTokenFn           func(string) (jwt.Claims, error)
+	GenerateTokenForUserFn    func(string) (string, error)
+	IsAdminFn                 func(string) (bool, error)
 }
 
 func (arm *AccountRepositoryMock) EnsureDatabaseIsOK(fn func(*gin.Context)) func(c *gin.Context) {
@@ -39,6 +40,10 @@ func (arm *AccountRepositoryMock) ConfirmAccount(username, password string) erro
 
 func (arm *AccountRepositoryMock) ConfirmAccountJwt(username, password string) (string, error) {
 	return arm.ConfirmAccountJwtFn(username, password)
+}
+
+func (arm *AccountRepositoryMock) FindAccountIdByUsername(username string) (int64, error) {
+	return arm.FindAccountIdByUsernameFn(username)
 }
 
 func (arm *AccountRepositoryMock) FindAllAccounts() ([]types.AccountGetData, error) {
@@ -72,7 +77,7 @@ func (arm *AccountRepositoryMock) PromoteExistingAccount(obj *types.AccountPatch
 	return arm.PromoteExistingAccountFn(obj)
 }
 
-func (arm *AccountRepositoryMock) FindUserRole(username string) (string, error) {
+func (arm *AccountRepositoryMock) FindUserRole(username string) (types.Role, error) {
 	return arm.FindUserRoleFn(username)
 }
 

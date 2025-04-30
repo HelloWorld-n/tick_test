@@ -156,7 +156,7 @@ func (bh *bookHandler) DeleteBookHandler() gin.HandlerFunc {
 	}
 }
 
-func (bh *bookHandler) RoleRequirer(handler gin.HandlerFunc, roles []string) func(c *gin.Context) {
+func (bh *bookHandler) RoleRequirer(handler gin.HandlerFunc, roles []types.Role) func(c *gin.Context) {
 	return func(c *gin.Context) {
 		claims, err := bh.accountHandler.ConfirmAccountFromGinContext(c)
 		if err != nil {
@@ -187,7 +187,7 @@ func (bh *bookHandler) RoleRequirer(handler gin.HandlerFunc, roles []string) fun
 }
 
 func (bh *bookHandler) requireBookKeeperRole(handler gin.HandlerFunc) gin.HandlerFunc {
-	return bh.RoleRequirer(handler, []string{"Admin", "BookKeeper"})
+	return bh.RoleRequirer(handler, []types.Role{"Admin", "BookKeeper"})
 }
 
 func (bh *bookHandler) prepareBook(route *gin.RouterGroup) {

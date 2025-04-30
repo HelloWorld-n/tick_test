@@ -436,6 +436,6 @@ func TestFindUserRole(t *testing.T) {
 
 		role, err := r.FindUserRole("john")
 		require.NoError(t, err)
-		require.Equal(t, "Admin", role)
+		require.Equal(t, types.Role("Admin"), role)
 	})
 }

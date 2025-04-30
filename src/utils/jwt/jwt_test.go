@@ -7,15 +7,16 @@ import (
 
 	"github.com/golang-jwt/jwt/v5"
 
+	"tick_test/types"
 	jwtpkg "tick_test/utils/jwt"
 )
 
 const (
-	testUsername  = "testuser"
-	testAdminUser = "admin"
-	testRole      = "User"
-	testAdminRole = "Admin"
-	testSecret    = "test-secret-key-for-jwt-unit-tests"
+	testUsername             = "testuser"
+	testAdminUser            = "admin"
+	testRole      types.Role = "User"
+	testAdminRole types.Role = "Admin"
+	testSecret               = "test-secret-key-for-jwt-unit-tests"
 )
 
 func TestGenerateToken_UnsetSecretKey(t *testing.T) {
@@ -50,7 +51,7 @@ func TestValidateToken_UnsetSecretKey(t *testing.T) {
 	}
 }
 
-func createTestToken(t *testing.T, username, role string, expireIn time.Duration) string {
+func createTestToken(t *testing.T, username, role types.Role, expireIn time.Duration) string {
 	t.Helper()
 	claims := jwt.MapClaims{
 		"username": username,
@@ -70,7 +71,7 @@ func createTestToken(t *testing.T, username, role string, expireIn time.Duration
 	return signedToken
 }
 
-func createModifiedToken(t *testing.T, username, role string, modifySignature bool) string {
+func createModifiedToken(t *testing.T, username, role types.Role, modifySignature bool) string {
 	t.Helper()
 	token := createTestToken(t, username, role, time.Hour)
 
@@ -130,7 +131,8 @@ func TestGenerateToken_Success(t *testing.T) {
 		t.Errorf("Token username claim = %v, want %v", username, testUsername)
 	}
 
-	role, ok := claims["role"].(string)
+	strRole, ok := claims["role"].(string)
+	role := types.Role(strRole)
 	if !ok || role != testRole {
 		t.Errorf("Token role claim = %v, want %v", role, testRole)
 	}
@@ -145,7 +147,7 @@ func TestGenerateToken_InvalidInputs(t *testing.T) {
 	tests := []struct {
 		name     string
 		username string
-		role     string
+		role     types.Role
 		expireIn time.Duration
 		wantErr  bool
 	}{
@@ -390,7 +392,7 @@ func TestGetRoleFromToken(t *testing.T) {
 	tests := []struct {
 		name      string
 		tokenFunc func(t *testing.T) string
-		wantRole  string
+		wantRole  types.Role
 		wantErr   bool
 	}{
 		{

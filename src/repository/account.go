@@ -1,6 +1,7 @@
 package repository
 
 import (
+	"database/sql"
 	"errors"
 	"fmt"
 	"strings"
@@ -17,6 +18,7 @@ type AccountRepository interface {
 	UserExists(username string) (exists bool, err error)
 	ConfirmAccount(username string, password string) (err error)
 	ConfirmAccountJwt(username string, password string) (token string, err error)
+	FindAccountIdByUsername(username string) (int64, error)
 	FindAllAccounts() (data []types.AccountGetData, err error)
 	FindPaginatedAccounts(pageSize int, pageNumber int) (accounts []types.AccountGetData, err error)
 	ConfirmNoAdmins() (adminCount int, err error)
@@ -24,7 +26,7 @@ type AccountRepository interface {
 	DeleteAccount(username string) error
 	UpdateExistingAccount(username string, obj *types.AccountPatchData) (err error)
 	PromoteExistingAccount(obj *types.AccountPatchPromoteData) (err error)
-	FindUserRole(username string) (string, error)
+	FindUserRole(username string) (types.Role, error)
 	ValidateToken(token string) (jwt.Claims, error)
 	GenerateTokenForUser(username string) (token string, err error)
 	IsAdmin(token string) (bool, error)
@@ -60,6 +62,26 @@ func (r *repo) UserExists(username string) (exists bool, err error) {
 		return false, fmt.Errorf("error checking user existence: %w", err)
 	}
 	return exists, nil
+}
+
+func (r *repo) FindAccountIdByUsername(username string) (int64, error) {
+	if r.DB.Conn == nil {
+		return 0, errDefs.ErrDatabaseOffline
+	}
+	if username == "" {
+		return 0, fmt.Errorf("%w: username must not be empty", errDefs.ErrBadRequest)
+	}
+
+	query := `SELECT id FROM account WHERE username = $1`
+	var id int64
+	err := r.DB.Conn.QueryRow(query, username).Scan(&id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return 0, fmt.Errorf("%w: username %q not found", errDefs.ErrEntityNotFound, username)
+		}
+		return 0, err
+	}
+	return id, nil
 }
 
 func (r *repo) FindPaginatedAccounts(pageSize int, pageNumber int) (accounts []types.AccountGetData, err error) {
@@ -334,7 +356,7 @@ func (r *repo) PromoteExistingAccount(obj *types.AccountPatchPromoteData) (err e
 	return
 }
 
-func (r *repo) FindUserRole(username string) (string, error) {
+func (r *repo) FindUserRole(username string) (types.Role, error) {
 	var role string
 	query := `
 		SELECT r.name 
@@ -346,7 +368,7 @@ func (r *repo) FindUserRole(username string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return role, nil
+	return types.Role(role), nil
 }
 
 func (r *repo) doPostgresPreparationForAccount() {

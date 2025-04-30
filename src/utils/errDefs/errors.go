@@ -11,6 +11,7 @@ var ErrConflict = errors.New("conflict")
 var ErrDatabaseOffline = fmt.Errorf("%w: database offline", ErrInternalServerError)
 var ErrDoesExist = fmt.Errorf("%w: item already exists", ErrConflict)
 var ErrBadRequest = errors.New("bad request")
+var ErrEntityNotFound = errors.New("entity not found")
 var ErrMissingField = fmt.Errorf("%w: field missing", ErrBadRequest)
 var ErrUnauthorized = errors.New("unauthorized")
 
@@ -20,6 +21,8 @@ func DetermineStatus(err error) (status int) {
 		return http.StatusConflict
 	case errors.Is(err, ErrBadRequest):
 		return http.StatusBadRequest
+	case errors.Is(err, ErrEntityNotFound):
+		return http.StatusNotFound
 	case errors.Is(err, ErrUnauthorized):
 		return http.StatusUnauthorized
 	default:
