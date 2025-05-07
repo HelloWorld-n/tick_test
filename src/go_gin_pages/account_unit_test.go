@@ -11,6 +11,7 @@ import (
 	"tick_test/repository"
 	"tick_test/types"
 	"tick_test/utils/errDefs"
+	"tick_test/utils/jwt"
 
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
@@ -75,12 +76,16 @@ func TestGetAllAccounts(t *testing.T) {
 }
 
 func TestLoginHandler_Success(t *testing.T) {
+	jwt.SetSecretKey([]byte("RU5DT0RFRF9TRUNSRVRfVEVYVA=="))
 	repo := &mocks.AccountRepositoryMock{
 		ConfirmAccountFn: func(username, password string) error {
 			if username == "valid" && password == "pass" {
 				return nil
 			}
 			return errors.New("invalid")
+		},
+		FindUserRoleFn: func(username string) (types.Role, error) {
+			return types.Role("User"), nil
 		},
 	}
 
@@ -95,7 +100,6 @@ func TestLoginHandler_Success(t *testing.T) {
 	handler(c)
 
 	assert.Equal(t, http.StatusOK, w.Code)
-	assert.Len(t, w.Body.String(), 82) // token length
 }
 
 func TestPostAccountHandler(t *testing.T) {
@@ -244,7 +248,7 @@ func TestPatchPromoteAccountHandler(t *testing.T) {
 			name: "Success",
 			repo: &mocks.AccountRepositoryMock{
 				ConfirmAccountFn: func(string, string) error { return nil },
-				FindUserRoleFn:   func(username string) (string, error) { return "Admin", nil },
+				FindUserRoleFn:   func(username string) (types.Role, error) { return "Admin", nil },
 				PromoteExistingAccountFn: func(data *types.AccountPatchPromoteData) error {
 					return nil
 				},
@@ -258,7 +262,7 @@ func TestPatchPromoteAccountHandler(t *testing.T) {
 			name: "Fail - Not Admin",
 			repo: &mocks.AccountRepositoryMock{
 				ConfirmAccountFn: func(string, string) error { return nil },
-				FindUserRoleFn:   func(username string) (string, error) { return "User", nil },
+				FindUserRoleFn:   func(username string) (types.Role, error) { return "User", nil },
 				PromoteExistingAccountFn: func(data *types.AccountPatchPromoteData) error {
 					return nil
 				},
@@ -272,7 +276,7 @@ func TestPatchPromoteAccountHandler(t *testing.T) {
 			name: "Fail - BindJSON error",
 			repo: &mocks.AccountRepositoryMock{
 				ConfirmAccountFn: func(string, string) error { return nil },
-				FindUserRoleFn:   func(username string) (string, error) { return "Admin", nil },
+				FindUserRoleFn:   func(username string) (types.Role, error) { return "Admin", nil },
 			},
 			inputPayload:   `invalid json`,
 			expectedStatus: http.StatusBadRequest,

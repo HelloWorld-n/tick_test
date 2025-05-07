@@ -7,6 +7,7 @@ import (
 	"tick_test/go_gin_pages"
 	"tick_test/internal/config"
 	"tick_test/repository"
+	"tick_test/utils/jwt"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
@@ -37,6 +38,7 @@ func main() {
 	}
 	url := go_gin_pages.UseConfigToDetermineURL(cfg)
 
+	jwt.SetSecretKey([]byte(os.Getenv("JWT_SECRET_KEY")))
 	repo, err := setupRepository()
 	if err != nil {
 		fmt.Fprintln(os.Stderr, "Repository setup failed:", err)

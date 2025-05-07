@@ -9,6 +9,7 @@ import (
 	"tick_test/repository"
 	"tick_test/types"
 	"tick_test/utils/errDefs"
+	"tick_test/utils/jwt"
 	"tick_test/utils/random"
 	"time"
 
@@ -30,10 +31,8 @@ type accountHandler struct {
 	repo repository.AccountRepository
 }
 
-func NewAccountHandler(accountRepo repository.AccountRepository) (res *accountHandler) {
-	return &accountHandler{
-		repo: accountRepo,
-	}
+func NewAccountHandler(accountRepo repository.AccountRepository) *accountHandler {
+	return &accountHandler{repo: accountRepo}
 }
 
 func (ah *accountHandler) getPaginatedAccountsHandler() gin.HandlerFunc {
@@ -69,41 +68,44 @@ func (ah *accountHandler) getPaginatedAccountsHandler() gin.HandlerFunc {
 func (ah *accountHandler) PatchPromoteAccountHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		// verify privileges
-		_, role, err := ah.ConfirmAccountFromGinContext(c)
-		if role != "Admin" {
+		claims, err := ah.ConfirmAccountFromGinContext(c)
+		if err != nil {
+			returnError(c, fmt.Errorf("%w: %v", errDefs.ErrUnauthorized, err))
+			return
+		}
+		if claims.Role != "Admin" {
 			returnError(c, fmt.Errorf("%w: only admin can modify roles", errDefs.ErrUnauthorized))
 			return
 		}
-		if err != nil {
-			c.JSON(errDefs.DetermineStatus(err), gin.H{"Error": err.Error()})
-			return
-		}
 
-		// apply changes
-		var data = new(types.AccountPatchPromoteData)
-		if err := c.ShouldBindJSON(data); err != nil {
+		var data types.AccountPatchPromoteData
+		if err := c.ShouldBindJSON(&data); err != nil {
 			returnError(c, fmt.Errorf("%w: invalid_json", errDefs.ErrBadRequest))
 			return
 		}
-		ah.repo.PromoteExistingAccount(data)
+		if err := ah.repo.PromoteExistingAccount(&data); err != nil {
+			returnError(c, err)
+			return
+		}
 		c.JSON(http.StatusOK, nil)
 	}
 }
 
 func (ah *accountHandler) PatchAccountHandler() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		username, err := ah.ConfirmUserFromGinContext(c)
-		if err != nil {
+		username := c.GetHeader("Username")
+		password := c.GetHeader("Password")
+		if err := ah.repo.ConfirmAccount(username, password); err != nil {
 			returnError(c, err)
 			return
 		}
-		var data = new(types.AccountPatchData)
-		if err := c.ShouldBindJSON(data); err != nil {
+
+		var data types.AccountPatchData
+		if err := c.ShouldBindJSON(&data); err != nil {
 			returnError(c, fmt.Errorf("%w: %v", errDefs.ErrBadRequest, err.Error()))
 			return
 		}
-		rows, err := ah.repo.UpdateExistingAccount(username, data)
-		if err != nil {
+		if err := ah.repo.UpdateExistingAccount(username, &data); err != nil {
 			returnError(c, err)
 			return
 		}
@@ -128,11 +130,12 @@ func (ah *accountHandler) DeleteAccountHandler() gin.HandlerFunc {
 			return
 		}
 
-		username, err = ah.ConfirmUserFromGinContext(c)
-		if err != nil {
+		password := c.GetHeader("Password")
+		if err := ah.repo.ConfirmAccount(username, password); err != nil {
 			returnError(c, err)
 			return
 		}
+
 		if err := ah.repo.DeleteAccount(username); err != nil {
 			returnError(c, err)
 			return
@@ -141,18 +144,15 @@ func (ah *accountHandler) DeleteAccountHandler() gin.HandlerFunc {
 	}
 }
 
-func generateToken(username string) (token string) {
-	token = random.RandSeq(80)
+func generateToken(username string) string {
+	token := random.RandSeq(80)
 	tokenStoreMutex.Lock()
-	tokenStore[token] = userTokenInfo{
-		Username: username,
-		Expiry:   time.Now().Add(30 * time.Minute),
-	}
+	tokenStore[token] = userTokenInfo{Username: username, Expiry: time.Now().Add(30 * time.Minute)}
 	tokenStoreMutex.Unlock()
-	return
+	return token
 }
 
-func confirmToken(val string) (username string, err error) {
+func confirmToken(val string) (string, error) {
 	tokenStoreMutex.RLock()
 	info, exists := tokenStore[val]
 	tokenStoreMutex.RUnlock()
@@ -169,33 +169,36 @@ func confirmToken(val string) (username string, err error) {
 	return info.Username, nil
 }
 
-func (ah *accountHandler) ConfirmUserFromGinContext(c *gin.Context) (username string, err error) {
-	if c.GetHeader("Password") != "" {
-		username = c.GetHeader("Username")
-		password := c.GetHeader("Password")
-		err = ah.repo.ConfirmAccount(username, password)
-		return
+func (ah *accountHandler) tokenAuth(c *gin.Context) (jwt.Claims, error) {
+	token := c.GetHeader("User-Token")
+	if token == "" {
+		return jwt.Claims{}, fmt.Errorf("%w: no token provided", errDefs.ErrUnauthorized)
 	}
-	if token := c.GetHeader("User-Token"); token != "" {
-		username, err = confirmToken(token)
-		return
+	claims, err := jwt.ValidateToken(token)
+	if err != nil {
+		return jwt.Claims{}, fmt.Errorf("%w: %v", errDefs.ErrUnauthorized, err.Error())
 	}
-	err = fmt.Errorf("%w: can not find suitable verification method", errDefs.ErrUnauthorized)
-	return
+	return claims, nil
 }
 
-func (ah *accountHandler) ConfirmAccountFromGinContext(c *gin.Context) (username string, role string, err error) {
-	username, err = ah.ConfirmUserFromGinContext(c)
-	if err != nil {
-		return "", "", err
+func (ah *accountHandler) passwordAuth(c *gin.Context) (jwt.Claims, error) {
+	username := c.GetHeader("Username")
+	password := c.GetHeader("Password")
+	if err := ah.repo.ConfirmAccount(username, password); err != nil {
+		return jwt.Claims{}, fmt.Errorf("%w: invalid credentials", errDefs.ErrUnauthorized)
 	}
-
-	role, err = ah.repo.FindUserRole(username)
+	role, err := ah.repo.FindUserRole(username)
 	if err != nil {
-		return username, "", fmt.Errorf("error retrieving user role: %w", err)
+		return jwt.Claims{}, fmt.Errorf("error retrieving user role: %w", err)
 	}
+	return jwt.Claims{Username: username, Role: role}, nil
+}
 
-	return username, role, nil
+func (ah *accountHandler) ConfirmAccountFromGinContext(c *gin.Context) (jwt.Claims, error) {
+	if c.GetHeader("Password") != "" {
+		return ah.passwordAuth(c)
+	}
+	return ah.tokenAuth(c)
 }
 
 func (ah *accountHandler) LoginHandler() gin.HandlerFunc {
@@ -205,10 +208,18 @@ func (ah *accountHandler) LoginHandler() gin.HandlerFunc {
 		if err := ah.repo.ConfirmAccount(username, password); err != nil {
 			returnError(c, err)
 			return
-		} else {
-			token := generateToken(username)
-			c.JSON(http.StatusOK, token)
 		}
+		role, err := ah.repo.FindUserRole(username)
+		if err != nil {
+			returnError(c, err)
+			return
+		}
+		token, err := jwt.GenerateToken(username, role, 30*time.Minute)
+		if err != nil {
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "Token generation error"})
+			return
+		}
+		c.JSON(http.StatusOK, token)
 	}
 }
 
@@ -237,11 +248,7 @@ func (ah *accountHandler) PostAccountHandler() gin.HandlerFunc {
 			returnError(c, err)
 			return
 		}
-
-		c.JSON(
-			http.StatusCreated,
-			data,
-		)
+		c.JSON(http.StatusCreated, data)
 	}
 }
 

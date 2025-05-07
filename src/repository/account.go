@@ -1,11 +1,15 @@
 package repository
 
 import (
+	"database/sql"
+	"errors"
 	"fmt"
 	"strings"
+	"time"
 
 	"tick_test/types"
 	errDefs "tick_test/utils/errDefs"
+	"tick_test/utils/jwt"
 
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
@@ -14,6 +18,8 @@ import (
 type AccountRepository interface {
 	UserExists(username string) (exists bool, err error)
 	ConfirmAccount(username string, password string) (err error)
+	ConfirmAccountJwt(username string, password string) (token string, err error)
+	FindAccountIdByUsername(username string) (int64, error)
 	FindAllAccounts() (data []types.AccountGetData, err error)
 	FindPaginatedAccounts(pageSize int, pageNumber int) (accounts []types.AccountGetData, err error)
 	ConfirmNoAdmins() (adminCount int, err error)
@@ -21,7 +27,10 @@ type AccountRepository interface {
 	DeleteAccount(username string) error
 	UpdateExistingAccount(username string, obj *types.AccountPatchData) (rowsAffected int64, err error)
 	PromoteExistingAccount(obj *types.AccountPatchPromoteData) (err error)
-	FindUserRole(username string) (string, error)
+	FindUserRole(username string) (types.Role, error)
+	ValidateToken(token string) (jwt.Claims, error)
+	GenerateTokenForUser(username string) (token string, err error)
+	IsAdmin(token string) (bool, error)
 }
 
 func validateCredential(cred string, credName string) (err error) {
@@ -54,6 +63,26 @@ func (r *repo) UserExists(username string) (exists bool, err error) {
 		return false, fmt.Errorf("error checking user existence: %w", err)
 	}
 	return exists, nil
+}
+
+func (r *repo) FindAccountIdByUsername(username string) (int64, error) {
+	if r.DB.Conn == nil {
+		return 0, errDefs.ErrDatabaseOffline
+	}
+	if username == "" {
+		return 0, fmt.Errorf("%w: username must not be empty", errDefs.ErrBadRequest)
+	}
+
+	query := `SELECT id FROM account WHERE username = $1`
+	var id int64
+	err := r.DB.Conn.QueryRow(query, username).Scan(&id)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return 0, fmt.Errorf("%w: username %q not found", errDefs.ErrEntityNotFound, username)
+		}
+		return 0, err
+	}
+	return id, nil
 }
 
 func (r *repo) FindPaginatedAccounts(pageSize int, pageNumber int) (accounts []types.AccountGetData, err error) {
@@ -116,6 +145,55 @@ func (r *repo) ConfirmAccount(username string, password string) (err error) {
 	}
 	err = fmt.Errorf("%w: unable to find user with given username", errDefs.ErrEntityNotFound)
 	return
+}
+
+func (r *repo) ConfirmAccountJwt(username string, password string) (token string, err error) {
+	err = r.ConfirmAccount(username, password)
+	if err != nil {
+		return "", err
+	}
+
+	role, err := r.FindUserRole(username)
+	if err != nil {
+		return "", fmt.Errorf("error getting user role: %w", err)
+	}
+
+	token, err = jwt.GenerateToken(username, role, 30*time.Minute)
+	if err != nil {
+		return "", fmt.Errorf("error generating token: %w", err)
+	}
+
+	return token, nil
+}
+
+func (r *repo) GenerateTokenForUser(username string) (token string, err error) {
+	exists, err := r.UserExists(username)
+	if err != nil {
+		return "", err
+	}
+	if !exists {
+		return "", fmt.Errorf("%w: user with username %s does not exist", errDefs.ErrBadRequest, username)
+	}
+
+	role, err := r.FindUserRole(username)
+	if err != nil {
+		return "", fmt.Errorf("error getting user role: %w", err)
+	}
+
+	token, err = jwt.GenerateToken(username, role, 30*time.Minute)
+	if err != nil {
+		return "", fmt.Errorf("error generating token: %w", err)
+	}
+
+	return token, nil
+}
+
+func (r *repo) ValidateToken(token string) (jwt.Claims, error) {
+	return jwt.ValidateToken(token)
+}
+
+func (r *repo) IsAdmin(token string) (bool, error) {
+	return jwt.IsAdmin(token)
 }
 
 func (r *repo) FindAllAccounts() (data []types.AccountGetData, err error) {
@@ -280,7 +358,7 @@ func (r *repo) PromoteExistingAccount(obj *types.AccountPatchPromoteData) (err e
 	return
 }
 
-func (r *repo) FindUserRole(username string) (string, error) {
+func (r *repo) FindUserRole(username string) (types.Role, error) {
 	var role string
 	query := `
 		SELECT r.name 
@@ -292,7 +370,7 @@ func (r *repo) FindUserRole(username string) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return role, nil
+	return types.Role(role), nil
 }
 
 func (r *repo) doPostgresPreparationForAccount() {
