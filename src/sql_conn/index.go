@@ -3,10 +3,10 @@ package sql_conn
 import (
 	"bufio"
 	"database/sql"
-	"fmt"
 	"os"
 
 	_ "github.com/lib/pq"
+	"github.com/sirupsen/logrus"
 )
 
 func createDatabase(name string, dbPath string) (db *sql.DB, err error) {
@@ -27,7 +27,7 @@ func DetermineURL(filePath string, defaultURL string) string {
 	if _, err := os.Stat(filePath); err == nil {
 		file, err := os.Open(filePath)
 		if err != nil {
-			fmt.Println("Error opening file:", err)
+			logrus.Error("Error opening file:", err)
 			return defaultURL
 		}
 		defer file.Close()
@@ -36,7 +36,7 @@ func DetermineURL(filePath string, defaultURL string) string {
 		if scanner.Scan() {
 			return scanner.Text()
 		} else if err := scanner.Err(); err != nil {
-			fmt.Println("Error reading file:", err)
+			logrus.Error("Error reading file:", err)
 			return defaultURL
 		}
 	}

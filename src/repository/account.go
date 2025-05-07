@@ -11,6 +11,7 @@ import (
 	errDefs "tick_test/utils/errDefs"
 	"tick_test/utils/jwt"
 
+	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -24,7 +25,7 @@ type AccountRepository interface {
 	ConfirmNoAdmins() (adminCount int, err error)
 	SaveAccount(obj *types.AccountPostData) (err error)
 	DeleteAccount(username string) error
-	UpdateExistingAccount(username string, obj *types.AccountPatchData) (err error)
+	UpdateExistingAccount(username string, obj *types.AccountPatchData) (rowsAffected int64, err error)
 	PromoteExistingAccount(obj *types.AccountPatchPromoteData) (err error)
 	FindUserRole(username string) (types.Role, error)
 	ValidateToken(token string) (jwt.Claims, error)
@@ -98,10 +99,12 @@ func (r *repo) FindPaginatedAccounts(pageSize int, pageNumber int) (accounts []t
 		return nil, fmt.Errorf("%w: parameter pageSize needs to be 1 or greater but it is %v", errDefs.ErrBadRequest, pageSize)
 	}
 
-	query := `SELECT 
-		username, 
-		(SELECT name FROM role WHERE acc.role_id = id)
-	FROM account acc ORDER BY id LIMIT $1 OFFSET $2`
+	query := `
+		SELECT 
+			username, 
+			(SELECT name FROM role WHERE acc.role_id = id)
+		FROM account acc ORDER BY id LIMIT $1 OFFSET $2
+	`
 	rows, err := r.DB.Conn.Query(query, pageSize, offset)
 	if err != nil {
 		return nil, err
@@ -140,7 +143,7 @@ func (r *repo) ConfirmAccount(username string, password string) (err error) {
 	if err = rows.Err(); err != nil {
 		return
 	}
-	err = errors.New("unable to find user with given username")
+	err = fmt.Errorf("%w: unable to find user with given username", errDefs.ErrEntityNotFound)
 	return
 }
 
@@ -278,6 +281,7 @@ func (r *repo) SaveAccount(obj *types.AccountPostData) (err error) {
 	if err != nil {
 		return
 	}
+	logrus.Info("new account ", obj.Username)
 
 	_, err = r.DB.Conn.Exec(query, obj.Username, hashedPassword, obj.Role)
 
@@ -286,51 +290,49 @@ func (r *repo) SaveAccount(obj *types.AccountPostData) (err error) {
 
 func (r *repo) DeleteAccount(username string) error {
 	_, err := r.DB.Conn.Exec(`DELETE FROM account WHERE username = $1`, username)
+	logrus.Info("deleted account ", username)
 	if err != nil {
 		return fmt.Errorf("error deleting account: %w", err)
 	}
 	return nil
 }
 
-func (r *repo) UpdateExistingAccount(username string, obj *types.AccountPatchData) (err error) {
+func (r *repo) UpdateExistingAccount(username string, obj *types.AccountPatchData) (rowsAffected int64, err error) {
 	// verify valid input
 	if err = validateCredential(obj.Username, "Username"); err != nil {
-		return
+		return 0, err
 	}
 	if err = validateCredential(obj.Password, "Password"); err != nil {
-		return
-	}
-	var count int
-	err = r.DB.Conn.QueryRow(`SELECT COUNT(*) FROM account WHERE username = $1`, username).Scan(&count)
-	if err != nil {
-		return err
-	}
-	if count == 0 {
-		return fmt.Errorf("%w: no account found with the specified username", errDefs.ErrConflict)
+		return 0, err
 	}
 	if obj.Password != obj.SamePassword {
-		return fmt.Errorf("%w: field `Password` differs from field `SamePassword`", errDefs.ErrBadRequest)
+		return 0, fmt.Errorf("%w: field `Password` differs from field `SamePassword`", errDefs.ErrBadRequest)
 	}
 	if obj.Password != "" && len(obj.Password) < 8 {
-		return fmt.Errorf("%w: field `Password` is too short; excepted lenght at least 8", errDefs.ErrBadRequest)
+		return 0, fmt.Errorf("%w: field `Password` is too short; excepted lenght at least 8", errDefs.ErrBadRequest)
 	}
 
 	// apply changes
 	if obj.Password != "" {
 		hashedPassword, err := hashPassword(obj.Password)
 		if err != nil {
-			return err
+			return 0, err
 		}
 		_, err = r.DB.Conn.Exec(`UPDATE account SET password = $1 WHERE username = $2`, hashedPassword, username)
 		if err != nil {
-			return err
+			return 0, err
 		}
 	}
 	if obj.Username != "" && obj.Username != username {
-		_, err = r.DB.Conn.Exec(`UPDATE account SET username = $1 WHERE username = $2`, obj.Username, username)
+		sqlResult, err := r.DB.Conn.Exec(`UPDATE account SET username = $1 WHERE username = $2`, obj.Username, username)
 		if err != nil {
-			return err
+			return 0, err
 		}
+		rowsAffected, _ = sqlResult.RowsAffected()
+		if rowsAffected == 0 {
+			return rowsAffected, fmt.Errorf("%w: no account found with the specified username", errDefs.ErrEntityNotFound)
+		}
+		return rowsAffected, nil
 	}
 	return
 }
@@ -373,28 +375,28 @@ func (r *repo) FindUserRole(username string) (types.Role, error) {
 
 func (r *repo) doPostgresPreparationForAccount() {
 	if r.DB.Conn != nil {
-		result, err := r.DB.Conn.Exec(`
+		_, err := r.DB.Conn.Exec(`
 			CREATE TABLE IF NOT EXISTS account (
 				id SERIAL PRIMARY KEY,
 				username varchar(100) UNIQUE NOT NULL,
 				password varchar(500) NOT NULL
 			);
 		`)
-		fmt.Println(result, err)
-		result, err = r.DB.Conn.Exec(`
+		logPossibleError(err)
+		_, err = r.DB.Conn.Exec(`
 			CREATE TABLE IF NOT EXISTS role (
 				id SERIAL PRIMARY KEY,
 				name TEXT UNIQUE NOT NULL
 			);
 		`)
-		fmt.Println(result, err)
-		result, err = r.DB.Conn.Exec(`
+		logPossibleError(err)
+		_, err = r.DB.Conn.Exec(`
 			INSERT INTO role (name) VALUES
 				('User'),
 				('BookKeeper'),
 				('Admin')
 			ON CONFLICT (name) DO NOTHING;
 		`)
-		fmt.Println(result, err)
+    logPossibleError(err)
 	}
 }

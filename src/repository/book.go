@@ -160,7 +160,7 @@ func (r *repo) RemoveBookByCode(code string) (n int64, err error) {
 
 func (r *repo) doPostgresPreparationForBook() {
 	if r.DB.Conn != nil {
-		result, err := r.DB.Conn.Exec(`
+		_, err := r.DB.Conn.Exec(`
 			CREATE TABLE IF NOT EXISTS book (
 				id SERIAL PRIMARY KEY,
 				code varchar(100) UNIQUE NOT NULL,
@@ -168,6 +168,6 @@ func (r *repo) doPostgresPreparationForBook() {
 				author varchar(100) NOT NULL
 			);
 		`)
-		fmt.Println(result, err)
+		logPossibleError(err)
 	}
 }

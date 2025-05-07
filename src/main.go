@@ -10,6 +10,7 @@ import (
 	"tick_test/utils/jwt"
 
 	"github.com/gin-gonic/gin"
+	"github.com/sirupsen/logrus"
 )
 
 func setupRepository() (repo repository.Repository, err error) {
@@ -29,7 +30,7 @@ func setupRepository() (repo repository.Repository, err error) {
 func main() {
 	configPath := flag.String("c", "config.yaml", "Path to config file")
 	flag.Parse()
-	fmt.Println("PATH", *configPath)
+	logrus.Debug("PATH", *configPath)
 	cfg, err := config.GetConfig(*configPath)
 	if err != nil && !os.IsNotExist(err) {
 		fmt.Fprintln(os.Stderr, err.Error())

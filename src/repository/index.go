@@ -3,7 +3,6 @@ package repository
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"io"
 	"os"
 	"path/filepath"
@@ -11,6 +10,8 @@ import (
 	"sync"
 	"tick_test/sql_conn"
 	"tick_test/types"
+
+	"github.com/sirupsen/logrus"
 )
 
 const iterationFile = "../.data/Iteration.json"
@@ -24,6 +25,12 @@ type ResultIndex struct {
 var Iteration int
 var IterationMutex sync.Mutex
 
+func logPossibleError(err error) {
+	if err != nil {
+		logrus.Error(err)
+	}
+}
+
 func (r *repo) IsDatabaseEnabled() bool {
 	return r.DB.Conn != nil
 }
@@ -36,7 +43,7 @@ func (r *repo) DoPostgresPreparation() (db *sql.DB, err error) {
 	db, err = sql_conn.Prepare(databasePath)
 
 	if err != nil {
-		fmt.Println(err)
+		logrus.Error(err)
 		return
 	} else {
 		r.DB.Conn = db
