@@ -18,7 +18,7 @@ type AccountRepositoryMock struct {
 	ConfirmNoAdminsFn         func() (int, error)
 	SaveAccountFn             func(*types.AccountPostData) error
 	DeleteAccountFn           func(string) error
-	UpdateExistingAccountFn   func(string, *types.AccountPatchData) error
+	UpdateExistingAccountFn   func(string, *types.AccountPatchData) (int64, error)
 	PromoteExistingAccountFn  func(*types.AccountPatchPromoteData) error
 	FindUserRoleFn            func(string) (types.Role, error)
 	ValidateTokenFn           func(string) (jwt.Claims, error)
@@ -69,7 +69,7 @@ func (arm *AccountRepositoryMock) DeleteAccount(username string) error {
 	return arm.DeleteAccountFn(username)
 }
 
-func (arm *AccountRepositoryMock) UpdateExistingAccount(username string, obj *types.AccountPatchData) error {
+func (arm *AccountRepositoryMock) UpdateExistingAccount(username string, obj *types.AccountPatchData) (int64, error) {
 	return arm.UpdateExistingAccountFn(username, obj)
 }
 
