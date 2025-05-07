@@ -105,7 +105,8 @@ func (ah *accountHandler) PatchAccountHandler() gin.HandlerFunc {
 			returnError(c, fmt.Errorf("%w: %v", errDefs.ErrBadRequest, err.Error()))
 			return
 		}
-		if err := ah.repo.UpdateExistingAccount(username, &data); err != nil {
+		rows, err := ah.repo.UpdateExistingAccount(username, &data)
+		if err != nil {
 			returnError(c, err)
 			return
 		}
